@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repository-intelligence-platform"
+version = "0.1.0"
+description = "Executable platform for the Repository Intelligence Platform (RIP)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+rip = "rip.cli:main"
+rip-foundation = "rip.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
