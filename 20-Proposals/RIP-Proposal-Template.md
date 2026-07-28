@@ -9,58 +9,69 @@
 
 ## 1. Problem Statement
 
-What problem, limitation, inconsistency, or opportunity does this proposal address?
+What problem, limitation, inconsistency, risk, or opportunity does this proposal address?
 
-## 2. Supporting Evidence
+## 2. Origin and Provenance
 
-What observations, outcomes, measurements, incidents, or prior decisions support the proposal?
+Where did this proposal originate? Identify conversations, incidents, evidence, artifacts, discoveries, or prior work that produced it.
 
-## 3. Proposed Change
+## 3. Supporting Evidence
+
+What observations, outcomes, measurements, incidents, artifacts, or prior decisions support the proposal?
+
+## 4. Proposed Change
 
 What exactly should be created, modified, superseded, or retired?
 
-## 4. Constitutional Purpose
+## 5. Constitutional Purpose
 
 What constitutional purpose does this change serve?
 
-## 5. Expected Benefit
+## 6. Expected Benefit
 
 What value should result if this proposal is approved and implemented?
 
-## 6. Risks and Tradeoffs
+## 7. Risks and Tradeoffs
 
-What could be weakened, constrained, complicated, or lost?
+What could be weakened, constrained, complicated, delayed, or lost?
 
-## 7. Alternatives Considered
+## 8. Alternatives Considered
 
 What other approaches were considered, including maintaining the current state?
 
-## 8. Affected Artifacts
+## 9. Affected Artifacts and Concepts
 
-List constitutions, standards, Hosts, organizations, schemas, interfaces, or processes affected.
+List constitutions, standards, concepts, providers, Hosts, organizations, repositories, schemas, interfaces, operations, or processes affected.
 
-## 9. Gatekeeper Decision
+## 10. Gatekeeper Decision
 
 **Decision:** Pending  
 **Decision Date:**  
 **Decision Authority:**  
+**Decision Record:**  
 
 ### Rationale
 
-## 10. Implementation
+## 11. Implementation
 
 **Implementation Status:** Not Started  
 **Owner:**  
 **Target:**  
 
-## 11. Validation
+Describe the implementation required to fulfill the decision.
 
-How will the organization determine whether the change achieved its intended purpose?
+## 12. Validation
 
-## 12. Reconsideration Criteria
+How will the organization determine whether the implementation fulfilled the decision and achieved its intended purpose?
+
+## 13. Reconsideration Criteria
 
 What future evidence or changed conditions should cause this proposal to be reconsidered?
 
-## 13. Related Proposals and Decisions
+## 14. Related Artifacts
 
-- None recorded.
+- Ideas:
+- Proposals:
+- Decisions:
+- Validations:
+- Standards:

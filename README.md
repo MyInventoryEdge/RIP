@@ -1,44 +1,55 @@
 # Repository Intelligence Platform
 
-> Preserve, enact, and continuously evolve an organization's engineering discipline through governed learning and constitutional authority.
+> A governed organizational knowledge platform for preserving, authorizing, applying, and evolving what an organization knows.
 
-The Repository Intelligence Platform (RIP) is an organizational engineering system. It gives an organization a durable way to preserve why decisions were made, enact current engineering authority, learn from evidence, and evolve without losing its history.
+RIP gives an organization a durable way to preserve knowledge, establish authority, understand its systems, govern change, operate from current understanding, and learn without losing history.
 
-RIP is not a replacement for source control, issue tracking, documentation, CI/CD, or engineering judgment. It is the governed layer that connects those systems to organizational memory and authority.
+RIP is not merely a repository intelligence product. Repository intelligence is one specialization within a broader organizational model.
+
+RIP is not a replacement for source control, issue tracking, documentation, CI/CD, infrastructure platforms, operational tools, or engineering judgment. It is the governed knowledge layer that connects those systems to organizational understanding and authority.
+
+## Start Here
+
+Read `START-HERE.md`.
 
 ## Foundational Principles
 
-1. The organization is the source of engineering authority.
-2. Hosts enact organizational authority; they do not create it.
-3. The system may learn autonomously, but only authorized governance may convert learning into authority.
-4. Decisions and their reasoning are preserved, including rejected and deferred proposals.
-5. History informs current judgment but does not imprison the organization.
-6. Every RIP artifact must serve a constitutional purpose.
-7. RIP must remain usable, inspectable, and deliverable.
+1. The Organization is the primary object.
+2. Knowledge is the primary enduring asset.
+3. Governance determines authority.
+4. AI and Hosts assist, infer, recommend, and execute; they do not silently create authority.
+5. Conversations inspire knowledge; they do not replace it.
+6. Every important decision becomes a governed artifact.
+7. Knowledge without provenance cannot become trusted knowledge.
+8. Concepts outlive technologies.
+9. Business knowledge is supplied; technical knowledge may be inferred.
+10. Implementation is incomplete until validated.
+11. History informs judgment without imprisoning the organization.
+12. RIP must govern itself by the same principles it establishes for others.
+
+## Knowledge Lifecycle
+
+```text
+Conversation → Idea → Proposal → Decision → Implementation → Validation → Institutional Knowledge
+```
 
 ## Repository Map
 
-- `00-Constitution/` — governing authority and foundational definitions
+- `00-Vision/` — purpose, manifesto, direction, and long-term platform vision
+- `00-Constitution/` — foundational authority and definitions
 - `10-Standards/` — approved implementation standards
-- `20-Proposals/` — proposed changes and the proposal template
-- `30-Evolution/` — the decision record and proposal lifecycle
-- `40-Hosts/` — Host contracts and implementations
-- `50-Organizations/` — organization onboarding and governed profiles
+- `20-Proposals/` — proposed changes and proposal templates
+- `30-Evolution/` — lifecycle, decisions, validation, and permanent governance history
+- `40-Hosts/` — Host contracts, implementations, and conformance expectations
+- `50-Organizations/` — organization profiles, onboarding, supplied knowledge, and governed adoption
 - `60-Reference/` — origin material and supporting reference artifacts
 
 ## Current Milestone
 
-**Milestone 0001 — The Structure Stands**
+**Milestone 0002 — The Repository Becomes the Organization**
 
-This repository establishes the initial constitutional frame. Inventory Edge is identified as the first reference organization but remains untouched and is not yet onboarded or governed by RIP.
+This milestone aligns RIP's repository with the approved understanding that RIP is a governed organizational knowledge platform.
 
-## Start Here
+## Current Status
 
-1. Read `00-Constitution/RIP-000-Constitution.md`.
-2. Review `00-Constitution/RIP-001-Lexicon.md`.
-3. Follow the proposal process in `20-Proposals/RIP-Proposal-Template.md`.
-4. Record every decision in `30-Evolution/Evolution-Register.md`.
-
-## Status
-
-**Foundation established. Construction active.**
+**Vision governed. Repository alignment implemented. Executable platform construction remains active.**

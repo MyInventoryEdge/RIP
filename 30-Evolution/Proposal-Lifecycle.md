@@ -1,18 +1,65 @@
 # Proposal Lifecycle
 
-## States
+## Knowledge-to-Authority Lifecycle
 
-- **Draft** — being formed; not yet submitted for governance.
+```text
+Conversation
+    ↓
+Idea
+    ↓
+Proposal
+    ↓
+Decision
+    ↓
+Implementation
+    ↓
+Validation
+    ↓
+Institutional Knowledge
+```
+
+## Idea States
+
+- **Captured** — recorded for preservation.
+- **Developing** — being explored.
+- **Promoted** — converted into a proposal.
+- **Closed** — intentionally not promoted, with rationale preserved.
+
+## Proposal States
+
+- **Draft** — being formed; not yet submitted.
 - **Under Review** — formally presented to the Gatekeeper.
-- **Approved** — accepted as authorized direction, subject to implementation where required.
+- **Approved** — accepted as authorized direction.
 - **Rejected** — not accepted under current evidence and conditions.
 - **Deferred** — decision intentionally postponed.
-- **Withdrawn** — removed from active consideration by its originator or authorized owner.
-- **Superseded** — replaced by a later approved proposal or authority.
-- **Reopened** — returned to active consideration because conditions or evidence changed.
-- **Implemented** — approved change has been enacted.
-- **Validated** — implementation outcome has been evaluated against the proposal's intended benefit.
+- **Withdrawn** — removed from active consideration by authorized action.
+- **Superseded** — replaced by later approved authority.
+- **Reopened** — returned to active consideration because evidence or conditions changed.
 
-## Rule
+## Execution States
 
-No terminal state erases a proposal. Every state transition remains part of the Evolution Register.
+- **Not Started**
+- **In Progress**
+- **Implemented**
+- **Partially Implemented**
+- **Blocked**
+- **Abandoned by Decision**
+
+## Validation States
+
+- **Pending**
+- **In Progress**
+- **Validated**
+- **Validated with Limitations**
+- **Failed Validation**
+- **Revalidation Required**
+
+## Rules
+
+1. No state transition erases history.
+2. Approval does not equal implementation.
+3. Implementation does not equal validation.
+4. Inferred knowledge does not equal authority.
+5. Rejected and deferred work remains part of institutional memory.
+6. Superseding authority identifies what it replaces.
+7. Validation records unfavorable outcomes as faithfully as favorable outcomes.
