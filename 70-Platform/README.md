@@ -1,72 +1,40 @@
-# RIP Platform — Milestone 0001
+# RIP Platform
 
-RIP can load and inspect its own five governed constitutional artifacts.
+Executable platform for the Repository Intelligence Platform.
 
-## Location
-
-Place this complete directory at:
-
-```text
-C:\RIP\70-Platform
-```
-
-The platform reads the authoritative files from:
-
-```text
-C:\RIP\00-Constitution
-```
-
-It does not copy or modify those files.
-
-## Requirements
-
-- Windows 10 or Windows 11
-- Python 3.11 or newer
-
-## Install
-
-Open PowerShell and run:
-
-```powershell
-cd C:\RIP\70-Platform
-py -m pip install -e .
-```
-
-## Verify
-
-```powershell
-py -m unittest discover -s tests -v
-rip status
-```
-
-The legacy command alias also works:
-
-```powershell
-rip-foundation status
-```
-
-## Commands
+## Milestone 0001 — Foundation
 
 ```powershell
 rip status
-rip lexicon Authority
-rip section constitution "Primary Object"
-rip constitution
 rip self
+rip lexicon Authority
 ```
 
-You may also run the local entry point:
+## Milestone 0002 — Filesystem Observation
+
+RIP can now record deterministic evidence about the structure of its own repository without claiming semantic interpretation.
 
 ```powershell
-py .\run-rip.py status
+rip observe
+rip observe --all
+rip observe --json
 ```
 
-RIP automatically locates `00-Constitution` when run from `C:\RIP` or any directory beneath it. An explicit path is supported when needed:
+The default observation target is the nearest ancestor containing `.git`, or both `00-Constitution` and `70-Platform`. A path may also be supplied explicitly:
 
 ```powershell
-rip --root C:\RIP\00-Constitution status
+rip observe C:\RIP
 ```
 
-## Scope
+The observer records stable IDs, paths, evidence kinds, timestamps, and basic file metadata. It excludes common generated/cache directories such as `.git`, `__pycache__`, `node_modules`, `bin`, and `obj`.
 
-This milestone provides deterministic file loading, Markdown parsing, an in-memory object model, a CLI, and automated tests. It uses only the Python standard library at runtime. It does not yet provide AI reasoning, autonomous discovery, a database, or a user interface.
+## Install or update
+
+From `C:\RIP\70-Platform`:
+
+```powershell
+py -m pip install -e .
+py -m unittest discover -s tests -v
+```
+
+No network access, AI provider, database, or non-standard Python dependency is required.

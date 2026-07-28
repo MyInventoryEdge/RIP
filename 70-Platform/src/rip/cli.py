@@ -1,22 +1,24 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from .foundation import load_foundation
+from .observation import observe_filesystem
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="rip",
-        description="Inspect RIP's governed constitutional foundation.",
+        description="Inspect RIP's governed foundation and observable repository structure.",
     )
     parser.add_argument(
         "--root",
         type=Path,
         default=None,
-        help="Path to 00-Constitution. By default RIP discovers it from the current directory.",
+        help="Repository root or 00-Constitution path, depending on the command.",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -31,6 +33,15 @@ def build_parser() -> argparse.ArgumentParser:
     section.add_argument("heading", help="Section heading, with or without its number")
 
     subparsers.add_parser("self", help="Print RIP's currently loaded self-description")
+
+    observe = subparsers.add_parser(
+        "observe",
+        help="Record deterministic filesystem observations without semantic inference",
+    )
+    observe.add_argument("path", nargs="?", type=Path, help="Directory to observe; defaults to repository root")
+    observe.add_argument("--json", action="store_true", help="Write the complete observation set as JSON")
+    observe.add_argument("--include-hidden", action="store_true", help="Include hidden entries except excluded build/cache directories")
+    observe.add_argument("--all", action="store_true", help="Print every observation in human-readable output")
     return parser
 
 
@@ -39,6 +50,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "observe":
+            target = args.path or args.root
+            observed = observe_filesystem(target, include_hidden=args.include_hidden)
+            if args.json:
+                print(json.dumps(observed.to_dict(), indent=2, sort_keys=True))
+            else:
+                _print_observations(observed, show_all=args.all)
+            return 0
+
         foundation = load_foundation(args.root)
 
         if args.command == "status":
@@ -89,9 +109,35 @@ def main(argv: list[str] | None = None) -> int:
 
         parser.error(f"Unknown command: {args.command}")
         return 2
-    except (FileNotFoundError, ValueError, KeyError) as exc:
+    except (FileNotFoundError, PermissionError, ValueError, KeyError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
+
+
+def _print_observations(observed, *, show_all: bool) -> None:
+    print("RIP Filesystem Observation\n")
+    print(f"Observation root: {observed.root}")
+    print(f"Observed at: {observed.observed_at.isoformat()}")
+    print(f"Observation count: {len(observed.observations)}")
+    print("\nObserved kinds:")
+    for kind, count in observed.counts().items():
+        print(f"  {kind}: {count}")
+
+    top_level = [
+        item for item in observed.observations
+        if item.relative_path != "." and "/" not in item.relative_path
+    ]
+    print("\nTop-level structure:")
+    for item in top_level:
+        marker = "/" if item.kind == "directory" else ""
+        print(f"  {item.relative_path}{marker} [{item.kind}]")
+
+    if show_all:
+        print("\nAll observations:")
+        for item in observed.observations:
+            print(f"  {item.observation_id}  {item.kind:<28} {item.relative_path}")
+
+    print("\nBoundary: these are deterministic observations, not semantic conclusions or authority.")
 
 
 if __name__ == "__main__":
