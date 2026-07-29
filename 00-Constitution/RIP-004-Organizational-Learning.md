@@ -4,7 +4,7 @@
 **Title:** Organizational Learning  
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
-**Classification:** Constitutional (Normative)  
+**Classification:** Governance (Normative)  
 **Version:** 1.0  
 **Effective Date:** 2026-07-29  
 **Owner:** Gatekeeper  
@@ -101,10 +101,6 @@ RIP preserves the distinction between:
 Learning is incomplete unless its source, evidence, reasoning, assumptions, confidence, uncertainty, authority state, implementation, validation, and observed outcome remain traceable.
 
 Where a conclusion depends on missing or weak evidence, that limitation SHALL be preserved with the conclusion.
-
-RIP-006 — Governance Chronicle preserves governance milestones, decision lineage, and historical context without independently creating normative authority.
-
-RIP-007 — Constitutional Document Registry records the identity, classification, authority, status, ownership, version, and lineage of governed artifacts.
 
 ## Failure and Experimentation
 
