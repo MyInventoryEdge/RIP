@@ -5,7 +5,10 @@
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Governance (Normative)  
-**Effective Date:** 2026-07-29
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** RIP-000 Constitution
 
 ---
 
@@ -77,3 +80,13 @@ The Registry is maintained under the authority of RIP-000.
 Changes to Registry entries SHALL be traceable to the governance action that authorized the corresponding artifact or metadata change.
 
 Changes to the Registry's required fields or governance rules require approval through constitutional governance.
+
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-001 — Lexicon
+- RIP-002 — Conceptual Model
+- RIP-003 — Governance
+- RIP-004 — Organizational Learning
+- RIP-005 — Mission
+- RIP-006 — Governance Chronicle
