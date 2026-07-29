@@ -1,6 +1,16 @@
 # RIP-001 — Lexicon
 
-**Status:** Approved Foundational Vocabulary
+**Document ID:** RIP-001  
+**Title:** Lexicon  
+**Status:** Ratified  
+**Authority:** RIP-000 Constitution  
+**Classification:** Constitutional (Normative)  
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** RIP-000 Constitution
+
+---
 
 ## Actor
 A person, team, organizational body, Host, service, or other entity capable of performing an action within declared boundaries.
@@ -56,6 +66,9 @@ The authorized governance role or body that may approve, reject, defer, reopen, 
 ## Governance
 The authorized process through which organizational changes, proposals, delegations, standards, and decisions become legitimate, traceable, reviewable, and evolvable.
 
+## Governance Chronicle
+The governed, non-normative record of how RIP's governance evolved, including its decisions, rationale, lineage, amendments, and milestones. RIP-006 is the canonical Governance Chronicle.
+
 ## History
 The preserved narrative and record explaining how knowledge and authority evolved. History informs current judgment but does not itself govern unless incorporated into current authority.
 
@@ -87,7 +100,7 @@ Organizational understanding represented with context, provenance, state, relati
 The traceable origin and history of knowledge, including source, time, evidence, transformations, interpretation, authorization, and later revision.
 
 ## Mission
-The current expression of what an organization is seeking to accomplish in service of its Purpose.
+The current expression of what an organization is seeking to accomplish in service of its Purpose. RIP-005 is the canonical statement of RIP's Mission.
 
 ## Objective
 A defined outcome an organization intends to achieve. Objectives may change without changing the organization's enduring Purpose.
@@ -128,6 +141,9 @@ The provider-independent requirements governing how reasoning is requested, stru
 ## Recommendation
 A reasoned proposed course of action that has not become authority unless adopted through governance.
 
+## Registry
+The authoritative catalog of governed artifacts, including their identity, status, classification, authority, version, ownership, and lineage. RIP-007 is the canonical Constitutional Document Registry.
+
 ## Relationship
 A meaningful and traceable connection between organizational objects, concepts, artifacts, Actors, authority, evidence, or history.
 
@@ -154,3 +170,13 @@ The organization's integrated, evidence-aware, relationship-aware, provenance-pr
 
 ## Validation
 Recorded evidence and evaluation determining whether an implementation satisfies an approved decision and achieves its intended purpose.
+
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-002 — Conceptual Model
+- RIP-003 — Governance
+- RIP-004 — Organizational Learning
+- RIP-005 — Mission
+- RIP-006 — Governance Chronicle
+- RIP-007 — Constitutional Document Registry
