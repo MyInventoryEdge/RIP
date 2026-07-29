@@ -1,10 +1,20 @@
 # RIP-002 — Conceptual Model
 
-**Status:** Approved Direction
+**Document ID:** RIP-002  
+**Title:** Conceptual Model  
+**Status:** Ratified  
+**Authority:** RIP-000 Constitution  
+**Classification:** Constitutional (Normative)  
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** RIP-000 Constitution
+
+---
 
 ## Purpose
 
-Define the principal organizational objects, relationships, flows, and distinctions through which RIP cultivates understanding.
+Define the principal organizational objects, relationships, flows, and distinctions through which RIP cultivates understanding in service of RIP-005 — Mission.
 
 Understanding is the outcome of the conceptual model. It is not created by storing disconnected facts, but by relating purpose, Actors, authority, evidence, knowledge, capabilities, constraints, execution, and history with explicit provenance and uncertainty.
 
@@ -145,7 +155,7 @@ What has been observed.
 What the organization currently understands, including degree of confidence, uncertainty, relationships, and provenance.
 
 ### History
-How evidence, knowledge, implementation, and authority evolved.
+How evidence, knowledge, implementation, and authority evolved. RIP-006 — Governance Chronicle preserves the historical evolution of RIP governance without independently creating normative authority.
 
 Evidence does not become authority merely because it exists. Inferred knowledge does not become authority merely because it is persuasive. History does not remain authority merely because it once governed.
 
@@ -250,3 +260,13 @@ Learn
   ↓
 Repeat
 ```
+
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-001 — Lexicon
+- RIP-003 — Governance
+- RIP-004 — Organizational Learning
+- RIP-005 — Mission
+- RIP-006 — Governance Chronicle
+- RIP-007 — Constitutional Document Registry
