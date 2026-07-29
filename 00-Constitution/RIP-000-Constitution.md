@@ -1,14 +1,24 @@
 # RIP-000 — Constitution
 
-**Status:** Approved Foundational Authority  
-**Authority:** Repository Intelligence Platform Gatekeeper  
-**Purpose:** Define the foundational authority, obligations, and boundaries of RIP.
+**Document ID:** RIP-000  
+**Title:** Constitution  
+**Status:** Ratified  
+**Authority:** Organization through the Gatekeeper  
+**Classification:** Constitutional (Normative)  
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** Self-governing constitutional authority
 
-## 1. Mission
+---
 
-RIP SHALL preserve, govern, apply, and continuously evolve organizational knowledge through explicit authority, traceable provenance, governed learning, disciplined reasoning, and validated implementation.
+## 1. Mission Authority
 
-RIP exists not merely to automate work, but to cultivate and improve organizational understanding.
+RIP-005 — Mission is the canonical and authoritative statement of why RIP exists.
+
+Every governed artifact, capability, implementation, and operational activity SHALL support and remain consistent with RIP-005.
+
+This Constitution defines the enduring authority, obligations, and boundaries through which that Mission is governed and enacted.
 
 ## 2. Primary Object
 
@@ -130,6 +140,8 @@ RIP SHALL preserve:
 
 Rejected, deferred, withdrawn, and superseded artifacts SHALL remain part of the institutional record.
 
+RIP-006 — Governance Chronicle preserves the historical evolution, reasoning, and milestones of RIP governance without independently creating normative authority.
+
 ## 9. Concepts and Providers
 
 RIP SHALL model durable concepts independently from provider-specific implementations.
@@ -189,10 +201,28 @@ Its repository SHOULD NOT intentionally lag behind approved organizational under
 
 When a coherent body of decisions has been governed, the repository SHOULD be brought into alignment in a complete consistency pass rather than fragmented into artificial documentation phases.
 
-## 15. Amendment
+## 15. Constitutional Corpus and Registry
+
+RIP-007 — Constitutional Document Registry is the authoritative catalog of governed artifacts, their identities, classifications, status, authority, version, ownership, and lineage.
+
+Every governed artifact SHALL be registered exactly once and SHALL remain consistent with its Registry entry.
+
+The Registry does not create authority merely by listing an artifact; it records authority established through governance.
+
+## 16. Amendment
 
 This Constitution may be amended only through an approved RIP proposal.
 
 Every amendment SHALL retain its proposal history, decision rationale, implementation record, validation result, and prior constitutional text.
 
 No implementation convenience, technological advancement, provider capability, or operational expediency SHALL supersede this Constitution.
+
+## Related Constitutional Documents
+
+- RIP-001 — Lexicon
+- RIP-002 — Conceptual Model
+- RIP-003 — Governance
+- RIP-004 — Organizational Learning
+- RIP-005 — Mission
+- RIP-006 — Governance Chronicle
+- RIP-007 — Constitutional Document Registry
