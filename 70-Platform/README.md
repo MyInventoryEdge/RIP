@@ -38,3 +38,47 @@ py -m unittest discover -s tests -v
 ```
 
 No network access, AI provider, database, or non-standard Python dependency is required.
+
+## Milestone 0003: Grounded reasoning
+
+RIP can send its governed foundation and current deterministic observation set to an OpenAI reasoning provider:
+
+```powershell
+rip ask "What do you know about yourself?"
+```
+
+The command reads `OPENAI_API_KEY` from the environment. The model defaults to `gpt-5.5` and can be changed without code changes:
+
+```powershell
+$env:RIP_OPENAI_MODEL = "your-model-id"
+rip ask "What do you know about yourself?" --show-metadata
+```
+
+The provider receives a structured evidence package, not direct filesystem access. Repository claims are instructed to cite exact observation IDs. Output is explicitly bounded as AI interpretation rather than organizational authority.
+
+## Milestone 0004A - RIP Reasoning Console
+
+The temporary Windows testing console provides a simple chat-style interface over the same reasoning service used by `rip ask`.
+
+Launch after installation with:
+
+```powershell
+rip-console
+```
+
+or double-click/run:
+
+```powershell
+.\START-RIP-CONSOLE.ps1
+```
+
+The console includes:
+
+- a question box with Enter-to-send and Shift+Enter for a new line;
+- live status messages for repository discovery, foundation loading, observation, evidence construction, and reasoning;
+- a scrollable conversation transcript;
+- one-click copying of the latest RIP response;
+- optional provider, model, token, response-ID, elapsed-time, and citation details;
+- clear conversation and friendly error presentation.
+
+This console is intentionally temporary and contains no separate reasoning implementation. It calls `rip.reasoning.ask_repository` directly so it can later be replaced by the permanent application UI without changing RIP's reasoning architecture.

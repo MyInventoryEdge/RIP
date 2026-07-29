@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .foundation import load_foundation
 from .observation import observe_filesystem
+from .reasoning import DEFAULT_MODEL, ask_repository
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,6 +43,18 @@ def build_parser() -> argparse.ArgumentParser:
     observe.add_argument("--json", action="store_true", help="Write the complete observation set as JSON")
     observe.add_argument("--include-hidden", action="store_true", help="Include hidden entries except excluded build/cache directories")
     observe.add_argument("--all", action="store_true", help="Print every observation in human-readable output")
+
+    ask = subparsers.add_parser(
+        "ask",
+        help="Ask an AI provider to interpret RIP's foundation and deterministic observations",
+    )
+    ask.add_argument("question", help="Question to answer from the supplied RIP evidence")
+    ask.add_argument(
+        "--model",
+        default=None,
+        help=f"OpenAI model identifier; defaults to RIP_OPENAI_MODEL or {DEFAULT_MODEL}",
+    )
+    ask.add_argument("--show-metadata", action="store_true", help="Print provider, model, response ID, and token usage")
     return parser
 
 
@@ -50,6 +63,29 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "ask":
+            result = ask_repository(args.question, root=args.root, model=args.model)
+            print("RIP Grounded Interpretation\n")
+            print(result.answer)
+            if result.unknown_observation_ids:
+                print("\nWARNING: The provider cited observation IDs not present in the supplied evidence:", file=sys.stderr)
+                for observation_id in result.unknown_observation_ids:
+                    print(f"  {observation_id}", file=sys.stderr)
+            if not result.cited_observation_ids:
+                print("\nWARNING: The provider returned no observation citations.", file=sys.stderr)
+            if args.show_metadata:
+                print("\nReasoning metadata:")
+                print(f"  Provider: {result.provider}")
+                print(f"  Model: {result.model}")
+                if result.response_id:
+                    print(f"  Response ID: {result.response_id}")
+                if result.input_tokens is not None:
+                    print(f"  Input tokens: {result.input_tokens}")
+                if result.output_tokens is not None:
+                    print(f"  Output tokens: {result.output_tokens}")
+                print(f"  Cited observations: {len(result.cited_observation_ids)}")
+            return 0
+
         if args.command == "observe":
             target = args.path or args.root
             observed = observe_filesystem(target, include_hidden=args.include_hidden)
@@ -109,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
 
         parser.error(f"Unknown command: {args.command}")
         return 2
-    except (FileNotFoundError, PermissionError, ValueError, KeyError) as exc:
+    except (FileNotFoundError, PermissionError, ValueError, KeyError, RuntimeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 

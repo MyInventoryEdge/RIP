@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repository-intelligence-platform"
-version = "0.2.0"
+version = "0.4.0"
 description = "Executable platform for the Repository Intelligence Platform (RIP)."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["openai>=1.0.0"]
 
 [project.scripts]
 rip = "rip.cli:main"
 rip-foundation = "rip.cli:main"
+rip-console = "rip.console:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

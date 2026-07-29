@@ -5,3 +5,8 @@ build/
 dist/
 .venv/
 .pytest_cache/
+
+# Local API and reasoning artifacts
+.env
+*.env
+rip-observation.json
