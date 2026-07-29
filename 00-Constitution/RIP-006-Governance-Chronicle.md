@@ -5,7 +5,10 @@
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Historical (Non-Normative)  
-**Effective Date:** 2026-07-29
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** RIP-000 Constitution
 
 ---
 
@@ -164,13 +167,25 @@ Transform the repository from a collection of governed documents into a self-des
 
 ### Current Implementation Record
 
-The following artifacts were authorized for immediate creation while the decisions remained fresh:
+The following artifacts were created and ratified:
 
 - RIP-005 — Mission
 - RIP-006 — Governance Chronicle
 - RIP-007 — Constitutional Document Registry
 
-Subsequent entries SHALL record cross-reference updates, repository alignment, validation findings, corrections, and baseline publication.
+The following repository alignment changes were completed:
+
+- RIP-000 aligned with canonical Mission authority, Chronicle history, Registry authority, standardized metadata, and constitutional references. Commit: `c6fb316dc9c83ebf6c5f4c318453c7b3b1c76fc4`.
+- RIP-001 aligned with standardized metadata, Mission authority, Chronicle and Registry terminology, and constitutional references. Commit: `964f4c2f9466bea0a72b11bfb56c7fb3dc3c13cb`.
+- README converted into a constitutional repository entry point with direct corpus navigation. Commit: `911fcc217d4c7e395f91e0b37837d2d8abb3a8ab`.
+- START-HERE aligned with the ratified reading order, constitutional architecture, and primary-question navigation. Commit: `461c5b491cec664b0ee28d99c586541d44f5def3`.
+- RIP-005 metadata and authority references normalized. Commit: `f86a50defe237b883a6a62b98955a20677ab78f1`.
+- RIP-007 metadata, authority, ownership, lineage, and constitutional references normalized. Commit: `f39184d66025c2831a3e749276fc8e1c110dee3f`.
+- RIP-002 metadata, Mission relationship, Chronicle distinction, and constitutional references aligned. Commit: `230a85a9d76b33f463a55e122ce1af28c48ca2c4`.
+- RIP-003 metadata, Mission relationship, Chronicle and Registry responsibilities, and constitutional references aligned. Commit: `a83646ede32ac29bdedaea711dc0d2a63b74f4dd`.
+- RIP-004 metadata, Mission relationship, Chronicle and Registry preservation responsibilities, and constitutional references aligned. Commit: `677f17a3365bab9d222801ef9f41adc075da34e8`.
+
+The remaining Sprint 0003 work is repository integrity validation, correction of any discovered inconsistencies, and publication of Repository Governance Baseline v1.0.
 
 ---
 
@@ -201,6 +216,7 @@ Future amendments SHALL record:
 | 2026-07-29 | Governance Chronicle authorized | Ratified |
 | 2026-07-29 | Constitutional Document Registry authorized | Ratified |
 | 2026-07-29 | Governance Sprint 0003 — Governance Implementation initiated | In progress |
+| 2026-07-29 | Constitutional corpus alignment completed through RIP-004 | Implemented |
 
 ---
 
@@ -209,3 +225,13 @@ Future amendments SHALL record:
 This Chronicle SHALL be extended as governance evolves.
 
 New entries SHALL preserve both what was decided and why it was decided, ensuring that future contributors can distinguish current authority from the history that produced it.
+
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-001 — Lexicon
+- RIP-002 — Conceptual Model
+- RIP-003 — Governance
+- RIP-004 — Organizational Learning
+- RIP-005 — Mission
+- RIP-007 — Constitutional Document Registry
