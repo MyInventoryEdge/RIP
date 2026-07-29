@@ -185,7 +185,30 @@ The following repository alignment changes were completed:
 - RIP-003 metadata, Mission relationship, Chronicle and Registry responsibilities, and constitutional references aligned. Commit: `a83646ede32ac29bdedaea711dc0d2a63b74f4dd`.
 - RIP-004 metadata, Mission relationship, Chronicle and Registry preservation responsibilities, and constitutional references aligned. Commit: `677f17a3365bab9d222801ef9f41adc075da34e8`.
 
-The remaining Sprint 0003 work is repository integrity validation, correction of any discovered inconsistencies, and publication of Repository Governance Baseline v1.0.
+### Repository Integrity Validation
+
+The constitutional corpus was validated for document existence, unique registration, numbering, naming, metadata, classifications, authority chains, navigation links, cross-references, and historical traceability.
+
+The validation discovered and corrected three inconsistencies:
+
+1. RIP-003 was marked Constitutional in its document metadata while the Registry classified it as Governance. The document classification was corrected. Commit: `7a750517cdf88ecf49b560d41a255b1b9f1500a6`.
+2. RIP-004 was marked Constitutional in its document metadata while the Registry classified it as Governance. The document classification was corrected. Commit: `2004a46cb6dd8766c11237f5daa1c2942505d954`.
+3. RIP-007 described itself as the registry of every governed artifact in RIP, although its ratified title, structure, and initial contents govern the constitutional corpus. Its scope language was corrected to remove the contradiction. Commit: `913531f091917a8074ac2f088072f6499b18fb7d`.
+
+After correction:
+
+- RIP-000 through RIP-007 each exist exactly once;
+- all eight constitutional artifacts are registered exactly once;
+- document IDs and file names are unique and sequential;
+- titles, status, version, effective date, ownership, classifications, and authority chains agree with the Registry;
+- README and START-HERE links resolve to the registered constitutional artifacts;
+- related-document references identify existing constitutional artifacts;
+- RIP-005 remains the canonical Mission;
+- RIP-006 remains historical and non-normative;
+- RIP-007 remains the authoritative catalog of the constitutional corpus;
+- no orphaned constitutional artifact or missing Registry entry was found.
+
+Repository integrity validation is complete. Publication of Repository Governance Baseline v1.0 remains the final Sprint 0003 work package.
 
 ---
 
@@ -217,6 +240,7 @@ Future amendments SHALL record:
 | 2026-07-29 | Constitutional Document Registry authorized | Ratified |
 | 2026-07-29 | Governance Sprint 0003 — Governance Implementation initiated | In progress |
 | 2026-07-29 | Constitutional corpus alignment completed through RIP-004 | Implemented |
+| 2026-07-29 | Constitutional repository integrity validation completed | Validated |
 
 ---
 
