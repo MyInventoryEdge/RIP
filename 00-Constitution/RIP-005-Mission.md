@@ -5,7 +5,10 @@
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Constitutional (Normative)  
-**Effective Date:** 2026-07-29
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** RIP-000 Constitution
 
 ---
 
@@ -29,6 +32,13 @@ No implementation may supersede the Mission.
 
 ## Authority
 
-This document derives its authority from the RIP Constitution and serves as the authoritative source for the platform's mission.
+This document derives its authority from RIP-000 — Constitution and serves as the authoritative source for the platform's mission.
 
 Any amendment to this Mission SHALL occur through constitutional governance.
+
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-003 — Governance
+- RIP-006 — Governance Chronicle
+- RIP-007 — Constitutional Document Registry
