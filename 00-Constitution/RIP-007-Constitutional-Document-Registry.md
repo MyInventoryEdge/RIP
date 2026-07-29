@@ -14,17 +14,17 @@
 
 ## Purpose
 
-The Constitutional Document Registry is the authoritative catalog of all governed artifacts within the Repository Intelligence Platform (RIP).
+The Constitutional Document Registry is the authoritative catalog of the governed constitutional corpus within the Repository Intelligence Platform (RIP).
 
-It establishes a single source of truth for document identity, authority, status, classification, and lineage.
+It establishes a single source of truth for constitutional document identity, authority, status, classification, and lineage.
 
-Every governed artifact SHALL appear in this Registry exactly once.
+Every governed constitutional artifact SHALL appear in this Registry exactly once.
 
 ## Registry Principles
 
 The Registry SHALL:
 
-- establish a unique identity for every governed artifact;
+- establish a unique identity for every governed constitutional artifact;
 - define each artifact's constitutional authority;
 - record document lineage and supersession;
 - distinguish normative documents from historical and informative documents;
@@ -33,7 +33,7 @@ The Registry SHALL:
 
 ## Required Registry Fields
 
-Each governed artifact SHALL have, directly or by an explicitly governed default, the following metadata:
+Each governed constitutional artifact SHALL have, directly or by an explicitly governed default, the following metadata:
 
 | Field | Meaning |
 |---|---|
@@ -61,14 +61,14 @@ Each governed artifact SHALL have, directly or by an explicitly governed default
 | RIP-004 | Organizational Learning | Governance | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Defines the relationship between learning, evidence, and governance |
 | RIP-005 | Mission | Constitutional | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Historical mission language distributed across early governance | None | Canonical statement of why RIP exists |
 | RIP-006 | Governance Chronicle | Historical | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Informal and distributed governance history | None | Governed but non-normative institutional record |
-| RIP-007 | Constitutional Document Registry | Governance | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Informal document inventory | None | Authoritative catalog of governed artifacts |
+| RIP-007 | Constitutional Document Registry | Governance | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Informal document inventory | None | Authoritative catalog of governed constitutional artifacts |
 
 ## Governance Rules
 
-1. No governed artifact may exist without a Registry entry.
+1. No governed constitutional artifact may exist without a Registry entry.
 2. Document identifiers are permanent and SHALL NOT be reused.
-3. Superseded and retired artifacts SHALL remain registered to preserve historical traceability.
-4. A change affecting a governed artifact's identity, status, authority, classification, version, ownership, or lineage SHALL include the corresponding Registry update.
+3. Superseded and retired constitutional artifacts SHALL remain registered to preserve historical traceability.
+4. A change affecting a governed constitutional artifact's identity, status, authority, classification, version, ownership, or lineage SHALL include the corresponding Registry update.
 5. The Registry SHALL distinguish current authority from historical context.
 6. Automated or manual validation SHALL verify consistency between registered artifacts and repository contents.
 7. The Registry does not itself elevate an unratified document to authority merely by listing it. Status and authority SHALL reflect the actual governance decision.
