@@ -4,7 +4,7 @@
 **Title:** Governance  
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
-**Classification:** Constitutional (Normative)  
+**Classification:** Governance (Normative)  
 **Version:** 1.0  
 **Effective Date:** 2026-07-29  
 **Owner:** Gatekeeper  
@@ -147,10 +147,6 @@ A constitutional amendment requires an approved Proposal and SHALL identify:
 - the prior text and amendment history.
 
 No Host, AI, provider, or implementation process may amend constitutional authority autonomously.
-
-RIP-006 — Governance Chronicle SHALL preserve the historical context and lineage of constitutional amendments without independently creating normative authority.
-
-RIP-007 — Constitutional Document Registry SHALL record the current identity, classification, authority, status, ownership, version, and lineage of each governed artifact.
 
 ## Repository Alignment
 
