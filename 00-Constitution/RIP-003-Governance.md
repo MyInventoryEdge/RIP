@@ -1,10 +1,20 @@
 # RIP-003 — Governance
 
-**Status:** Approved Direction
+**Document ID:** RIP-003  
+**Title:** Governance  
+**Status:** Ratified  
+**Authority:** RIP-000 Constitution  
+**Classification:** Constitutional (Normative)  
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** RIP-000 Constitution
+
+---
 
 ## Governance Principle
 
-The organization governs. RIP provides the structure through which governance becomes explicit, traceable, enactable, reviewable, and evolvable.
+The organization governs. RIP provides the structure through which governance becomes explicit, traceable, enactable, reviewable, and evolvable in service of RIP-005 — Mission.
 
 Governance precedes evolution. No learning system, reasoning provider, Host, engineer, repository, or implementation may convert its own output into organizational authority without an authorized governance act.
 
@@ -138,6 +148,10 @@ A constitutional amendment requires an approved Proposal and SHALL identify:
 
 No Host, AI, provider, or implementation process may amend constitutional authority autonomously.
 
+RIP-006 — Governance Chronicle SHALL preserve the historical context and lineage of constitutional amendments without independently creating normative authority.
+
+RIP-007 — Constitutional Document Registry SHALL record the current identity, classification, authority, status, ownership, version, and lineage of each governed artifact.
+
 ## Repository Alignment
 
 When the organization has approved a coherent body of related decisions, RIP's governed artifacts SHOULD be updated in a single consistency pass.
@@ -164,3 +178,13 @@ Assists discovery, observation, inference, interpretation, organization, explana
 Supplies bounded reasoning capability under RIP's Constitution, conceptual model, vocabulary, and governance. A reasoning provider is replaceable and does not become organizational authority.
 
 No engineer, Host, AI, provider, or repository becomes organizational authority merely by producing useful output.
+
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-001 — Lexicon
+- RIP-002 — Conceptual Model
+- RIP-004 — Organizational Learning
+- RIP-005 — Mission
+- RIP-006 — Governance Chronicle
+- RIP-007 — Constitutional Document Registry
