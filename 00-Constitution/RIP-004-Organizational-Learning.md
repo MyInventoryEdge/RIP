@@ -1,10 +1,20 @@
 # RIP-004 — Organizational Learning
 
-**Status:** Approved Direction
+**Document ID:** RIP-004  
+**Title:** Organizational Learning  
+**Status:** Ratified  
+**Authority:** RIP-000 Constitution  
+**Classification:** Constitutional (Normative)  
+**Version:** 1.0  
+**Effective Date:** 2026-07-29  
+**Owner:** Gatekeeper  
+**Parent Authority:** RIP-000 Constitution
+
+---
 
 ## Purpose
 
-Organizational learning converts experience into durable, governed knowledge and improved understanding.
+Organizational learning converts experience into durable, governed knowledge and improved understanding in service of RIP-005 — Mission.
 
 ## Core Principle
 
@@ -92,6 +102,10 @@ Learning is incomplete unless its source, evidence, reasoning, assumptions, conf
 
 Where a conclusion depends on missing or weak evidence, that limitation SHALL be preserved with the conclusion.
 
+RIP-006 — Governance Chronicle preserves governance milestones, decision lineage, and historical context without independently creating normative authority.
+
+RIP-007 — Constitutional Document Registry records the identity, classification, authority, status, ownership, version, and lineage of governed artifacts.
+
 ## Failure and Experimentation
 
 RIP does not exist to eliminate failure. It exists to prevent the needless loss of what failure teaches.
@@ -137,3 +151,13 @@ The answer is not authority. It is an evidence-based self-assessment that may pr
 RIP SHALL support repeated reassessment as evidence, implementations, providers, constraints, and authority change.
 
 Organizational maturity is not the absence of unknowns. It is the ability to distinguish accurately among what is understood, what is inferred, what is governed, what is uncertain, and what remains undiscovered.
+
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-001 — Lexicon
+- RIP-002 — Conceptual Model
+- RIP-003 — Governance
+- RIP-005 — Mission
+- RIP-006 — Governance Chronicle
+- RIP-007 — Constitutional Document Registry
