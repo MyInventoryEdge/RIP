@@ -115,3 +115,13 @@ The output directory contains `candidate-knowledge.json`,
 fails when the input session did not pass parser validation or an AI response
 cannot be validated after one explicit repair attempt. The architectural
 decision prompt is a version-controlled asset at `prompts/architectural_decisions.md`.
+
+## Candidate review
+
+Render candidate knowledge without an AI call or network dependency:
+
+```powershell
+rip render-knowledge C:\Temp\rip-interpretation-production\candidate-knowledge.json --output C:\Temp\rip-renderer-validation
+```
+
+This creates self-contained `candidate-review.html` and complete `candidate-review.md` artifacts. Rendering fails on malformed candidates rather than omitting them.

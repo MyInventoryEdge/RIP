@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .foundation import load_foundation
 from .interpretation import interpret_session
+from .interpretation.renderer import render_knowledge
 from .interpretation.service import DEFAULT_CHUNK_CHARACTERS, DEFAULT_MODEL as INTERPRETATION_DEFAULT_MODEL
 from .observation import observe_filesystem
 from .reasoning import DEFAULT_MODEL, ask_repository
@@ -56,6 +57,9 @@ def build_parser() -> argparse.ArgumentParser:
     interpret.add_argument("--output", required=True, type=Path, help="Directory for interpretation outputs")
     interpret.add_argument("--model", default=INTERPRETATION_DEFAULT_MODEL, help=f"Interpreter model; defaults to {INTERPRETATION_DEFAULT_MODEL}")
     interpret.add_argument("--chunk-characters", type=int, default=DEFAULT_CHUNK_CHARACTERS, help=f"Maximum canonical message characters per provider request; defaults to {DEFAULT_CHUNK_CHARACTERS}")
+    render = subparsers.add_parser("render-knowledge", help="Render candidate knowledge into self-contained human review reports")
+    render.add_argument("candidate_knowledge", type=Path, help="Path to candidate-knowledge.json")
+    render.add_argument("--output", required=True, type=Path, help="Directory for candidate-review.html and candidate-review.md")
 
     ask = subparsers.add_parser(
         "ask",
@@ -94,6 +98,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\nRejected:\n    {result.rejected_candidates}")
             print("\nValidation:\n    PASS")
             print(f"\nOutput: {args.output.resolve()}")
+            return 0
+        if args.command == "render-knowledge":
+            result = render_knowledge(args.candidate_knowledge, args.output)
+            print(f"Candidates read: {result['candidates']}")
+            print(f"Candidates rendered to HTML: {result['candidates']}")
+            print(f"Candidates rendered to Markdown: {result['candidates']}")
+            print("Validation: PASS")
             return 0
         if args.command == "ask":
             result = ask_repository(args.question, root=args.root, model=args.model)
