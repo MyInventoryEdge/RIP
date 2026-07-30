@@ -96,3 +96,22 @@ The console includes:
 - clear conversation and friendly error presentation.
 
 This console is intentionally temporary and contains no separate reasoning implementation. It calls `rip.reasoning.ask_repository` directly so it can later be replaced by the permanent application UI without changing RIP's reasoning architecture.
+
+## Knowledge Interpretation
+
+RIP can turn a validated `canonical-session.json` into traceable candidate
+architectural decisions. It never alters the session and does not treat a
+candidate as approved knowledge. Every candidate includes exact, offset-based
+evidence from canonical message IDs for human review; offsets are zero-based
+Python Unicode code-point positions in the source Markdown.
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m rip.cli interpret C:\Temp\rip-canonical-session-validation\canonical-session.json --output C:\Temp\rip-interpretation
+```
+
+The output directory contains `candidate-knowledge.json`,
+`interpretation-manifest.json`, and `interpretation-report.md`. The command
+fails when the input session did not pass parser validation or an AI response
+cannot be validated after one explicit repair attempt. The architectural
+decision prompt is a version-controlled asset at `prompts/architectural_decisions.md`.

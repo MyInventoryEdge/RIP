@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 from .foundation import load_foundation
+from .interpretation import interpret_session
+from .interpretation.service import DEFAULT_CHUNK_CHARACTERS, DEFAULT_MODEL as INTERPRETATION_DEFAULT_MODEL
 from .observation import observe_filesystem
 from .reasoning import DEFAULT_MODEL, ask_repository
 from .session import parse_session
@@ -49,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
     parse_session_command.add_argument("conversation", type=Path, help="Path to a supported conversation.json export")
     parse_session_command.add_argument("--output", required=True, type=Path, help="Directory for canonical-session.json, canonical-session.md, and parser-manifest.json")
 
+    interpret = subparsers.add_parser("interpret", help="Extract governed knowledge candidates from a validated canonical session")
+    interpret.add_argument("canonical_session", type=Path, help="Path to a validated canonical-session.json")
+    interpret.add_argument("--output", required=True, type=Path, help="Directory for interpretation outputs")
+    interpret.add_argument("--model", default=INTERPRETATION_DEFAULT_MODEL, help=f"Interpreter model; defaults to {INTERPRETATION_DEFAULT_MODEL}")
+    interpret.add_argument("--chunk-characters", type=int, default=DEFAULT_CHUNK_CHARACTERS, help=f"Maximum canonical message characters per provider request; defaults to {DEFAULT_CHUNK_CHARACTERS}")
+
     ask = subparsers.add_parser(
         "ask",
         help="Ask an AI provider to interpret RIP's foundation and deterministic observations",
@@ -76,6 +84,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Output: {args.output.resolve()}")
             for warning in session.validation.warnings:
                 print(f"WARNING: {warning}", file=sys.stderr)
+            return 0
+        if args.command == "interpret":
+            result = interpret_session(args.canonical_session, args.output, model=args.model, chunk_characters=args.chunk_characters)
+            print("Knowledge Interpretation Complete\n")
+            print("Knowledge Type:\n    Architectural Decisions")
+            print(f"\nCandidates:\n    {len(result.candidates)}")
+            print(f"\nEvidence Coverage:\n    {result.messages_with_evidence} messages")
+            print(f"\nRejected:\n    {result.rejected_candidates}")
+            print("\nValidation:\n    PASS")
+            print(f"\nOutput: {args.output.resolve()}")
             return 0
         if args.command == "ask":
             result = ask_repository(args.question, root=args.root, model=args.model)
