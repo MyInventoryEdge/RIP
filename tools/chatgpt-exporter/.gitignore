@@ -1,2 +1,4 @@
 .chatgpt-edge-profile/
 validation-export/
+validation-export-complete/
+full-export*.log
