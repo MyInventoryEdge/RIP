@@ -43,6 +43,16 @@ No network access, AI provider, database, or non-standard Python dependency is r
 
 RIP bootstraps `RIP-000` and `RIP-007`, discovers the active Constitutional Corpus from the Registry, validates every registered artifact, and retains a validated Constitutional Memory. The runtime state is stored atomically at `70-Platform/.rip-state/constitutional-memory.json`, is ignored by Git, and is reused when source signatures are unchanged. A changed registry or constitutional artifact rebuilds the validated memory; corrupt state is rejected and recovered from the authoritative Markdown corpus.
 
+## Canonical session parsing
+
+`rip parse-session` converts a supported conversation export into a source-independent canonical session. It does not classify, summarize, interpret, or call an AI model; it preserves every message's Markdown, role, source identifier, order, and unrecognized source metadata.
+
+```powershell
+rip parse-session C:\RIP\tools\chatgpt-exporter\validation-export-complete\conversation.json --output C:\RIP\parsed-session
+```
+
+The output directory contains `canonical-session.json` (structured canonical data), `canonical-session.md` (a readable full transcript), and `parser-manifest.json` (source, statistics, warnings, and validation result). Parsing fails rather than producing output when counts, order, source identifiers, or Markdown preservation cannot be validated. The current ChatGPT exporter supplies no upstream turn ID and its viewport-local `index` values may repeat; RIP retains each raw index in source metadata, uses deterministic source-order identifiers, and records the limitation as a warning.
+
 ## Milestone 0003: Grounded reasoning
 
 RIP can send its governed foundation and current deterministic observation set to an OpenAI reasoning provider:

@@ -8,6 +8,7 @@ from pathlib import Path
 from .foundation import load_foundation
 from .observation import observe_filesystem
 from .reasoning import DEFAULT_MODEL, ask_repository
+from .session import parse_session
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,6 +45,10 @@ def build_parser() -> argparse.ArgumentParser:
     observe.add_argument("--include-hidden", action="store_true", help="Include hidden entries except excluded build/cache directories")
     observe.add_argument("--all", action="store_true", help="Print every observation in human-readable output")
 
+    parse_session_command = subparsers.add_parser("parse-session", help="Normalize an exported conversation into RIP's canonical session format")
+    parse_session_command.add_argument("conversation", type=Path, help="Path to a supported conversation.json export")
+    parse_session_command.add_argument("--output", required=True, type=Path, help="Directory for canonical-session.json, canonical-session.md, and parser-manifest.json")
+
     ask = subparsers.add_parser(
         "ask",
         help="Ask an AI provider to interpret RIP's foundation and deterministic observations",
@@ -63,6 +68,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "parse-session":
+            session = parse_session(args.conversation, args.output)
+            print(f"Canonical session: {session.session_id}")
+            print(f"Messages: {session.statistics.message_count}")
+            print(f"Validation: {'PASS' if session.validation.passed else 'FAIL'}")
+            print(f"Output: {args.output.resolve()}")
+            for warning in session.validation.warnings:
+                print(f"WARNING: {warning}", file=sys.stderr)
+            return 0
         if args.command == "ask":
             result = ask_repository(args.question, root=args.root, model=args.model)
             print("RIP Grounded Interpretation\n")
