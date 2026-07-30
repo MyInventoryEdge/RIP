@@ -157,3 +157,57 @@ Organizational maturity is not the absence of unknowns. It is the ability to dis
 - RIP-005 — Mission
 - RIP-006 — Governance Chronicle
 - RIP-007 — Constitutional Document Registry
+
+
+## Governed Organizational Wisdom
+
+### Principle
+
+RIP SHALL NOT retain organization-specific operational knowledge as part of its institutional knowledge.
+
+RIP SHALL retain only **Governed Organizational Wisdom** that has been abstracted from validated organizational experience, stripped of organization-specific operational content, and approved through the governance process.
+
+### Knowledge Boundary
+
+Customer operational knowledge, organizational memory, proprietary information, and organization-specific decisions remain the property of the originating Organization and SHALL NOT become platform knowledge solely by virtue of being processed by RIP.
+
+Only generalized organizational principles that have completed abstraction, validation, and governance approval MAY become RIP Institutional Knowledge.
+
+### Learning Lifecycle
+
+```text
+Customer Organization
+        |
+        v
+Evidence
+        |
+        v
+Reasoning
+        |
+        v
+Decision
+        |
+        v
+Validation
+        |
+        v
+Lesson Learned
+        |
+        v
+Generalization
+        |
+        v
+Governed Organizational Wisdom Proposal
+        |
+        v
+Governance Review
+        |
+        +------ Rejected -> retained only within originating organization
+        |
+        +------ Approved -> RIP Institutional Knowledge -> Available to all organizations
+```
+
+### Provenance
+
+Every item of Governed Organizational Wisdom SHALL retain traceable provenance to the originating validated experience while preventing disclosure of organization-specific operational information.
+
