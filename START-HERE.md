@@ -6,14 +6,14 @@ Do not begin by treating RIP as a codebase, repository scanner, or documentation
 
 ## Recommended Reading Order
 
-1. [`RIP-005 — Mission`](00-Constitution/RIP-005-Mission.md)
-2. [`RIP-000 — Constitution`](00-Constitution/RIP-000-Constitution.md)
-3. [`RIP-001 — Lexicon`](00-Constitution/RIP-001-Lexicon.md)
-4. [`RIP-002 — Conceptual Model`](00-Constitution/RIP-002-Conceptual-Model.md)
-5. [`RIP-003 — Governance`](00-Constitution/RIP-003-Governance.md)
-6. [`RIP-004 — Organizational Learning`](00-Constitution/RIP-004-Organizational-Learning.md)
-7. [`RIP-007 — Constitutional Document Registry`](00-Constitution/RIP-007-Constitutional-Document-Registry.md)
-8. [`RIP-006 — Governance Chronicle`](00-Constitution/RIP-006-Governance-Chronicle.md)
+1. [`RIP-000 — Constitution`](00-Constitution/RIP-000-Constitution.md)
+2. [`RIP-001 — Mission`](00-Constitution/RIP-001-Mission.md)
+3. [`RIP-002 — Lexicon`](00-Constitution/RIP-002-Lexicon.md)
+4. [`RIP-003 — Conceptual Model`](00-Constitution/RIP-003-Conceptual-Model.md)
+5. [`RIP-004 — Governance`](00-Constitution/RIP-004-Governance.md)
+6. [`RIP-005 — Organizational Learning`](00-Constitution/RIP-005-Organizational-Learning.md)
+7. [`RIP-006 — Governance Chronicle`](00-Constitution/RIP-006-Governance-Chronicle.md)
+8. [`RIP-007 — Constitutional Document Registry`](00-Constitution/RIP-007-Constitutional-Document-Registry.md)
 9. [`RIP Vision`](00-Vision/RIP-Vision.md)
 10. [`RIP-PROP-0003 — Product Vision and Platform Direction`](20-Proposals/RIP-PROP-0003-Product-Vision-and-Platform-Direction.md)
 11. [`DEC-0003 — Product Vision and Platform Direction`](30-Evolution/Decisions/DEC-0003-Product-Vision-and-Platform-Direction.md)
@@ -23,7 +23,7 @@ Do not begin by treating RIP as a codebase, repository scanner, or documentation
 ## Constitutional Architecture
 
 ```text
-                         RIP-005
+                         RIP-001
                           Mission
                              │
                              ▼
@@ -33,11 +33,11 @@ Do not begin by treating RIP as a codebase, repository scanner, or documentation
           ┌──────────────────┼──────────────────┐
           │                  │                  │
           ▼                  ▼                  ▼
-       RIP-001            RIP-002            RIP-003
+       RIP-002            RIP-003            RIP-004
         Lexicon       Conceptual Model       Governance
                              │                  │
                              ▼                  ├──────────────┐
-                          RIP-004               ▼              ▼
+                          RIP-005               ▼              ▼
                     Organizational Learning  RIP-006        RIP-007
                                            Chronicle       Registry
                                       (historical,       (authoritative
@@ -48,12 +48,12 @@ The diagram is an orientation aid, not an independent source of authority. The d
 
 ## What Each Constitutional Document Answers
 
-- **RIP-005 — Mission:** Why does RIP exist?
 - **RIP-000 — Constitution:** What are RIP's enduring governing principles and boundaries?
-- **RIP-001 — Lexicon:** What do RIP's governed terms mean?
-- **RIP-002 — Conceptual Model:** How does RIP represent organizational reality and understanding?
-- **RIP-003 — Governance:** How is authority created, changed, and exercised?
-- **RIP-004 — Organizational Learning:** How does experience become durable governed knowledge?
+- **RIP-001 — Mission:** Why does RIP exist?
+- **RIP-002 — Lexicon:** What do RIP's governed terms mean?
+- **RIP-003 — Conceptual Model:** How does RIP represent organizational reality and understanding?
+- **RIP-004 — Governance:** How is authority created, changed, and exercised?
+- **RIP-005 — Organizational Learning:** How does experience become durable governed knowledge?
 - **RIP-006 — Governance Chronicle:** How and why did RIP's governance evolve?
 - **RIP-007 — Constitutional Document Registry:** What governed artifacts exist, and what is their status and authority?
 

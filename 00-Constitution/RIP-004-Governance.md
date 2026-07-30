@@ -1,6 +1,6 @@
-# RIP-003 — Governance
+# RIP-004 — Governance
 
-**Document ID:** RIP-003  
+**Document ID:** RIP-004  
 **Title:** Governance  
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
@@ -14,7 +14,7 @@
 
 ## Governance Principle
 
-The organization governs. RIP provides the structure through which governance becomes explicit, traceable, enactable, reviewable, and evolvable in service of RIP-005 — Mission.
+The organization governs. RIP provides the structure through which governance becomes explicit, traceable, enactable, reviewable, and evolvable in service of RIP-001 — Mission.
 
 Governance precedes evolution. No learning system, reasoning provider, Host, engineer, repository, or implementation may convert its own output into organizational authority without an authorized governance act.
 
@@ -178,9 +178,9 @@ No engineer, Host, AI, provider, or repository becomes organizational authority 
 ## Related Constitutional Documents
 
 - RIP-000 — Constitution
-- RIP-001 — Lexicon
-- RIP-002 — Conceptual Model
-- RIP-004 — Organizational Learning
-- RIP-005 — Mission
+- RIP-001 — Mission
+- RIP-002 — Lexicon
+- RIP-003 — Conceptual Model
+- RIP-005 — Organizational Learning
 - RIP-006 — Governance Chronicle
 - RIP-007 — Constitutional Document Registry

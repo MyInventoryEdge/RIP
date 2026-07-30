@@ -1,11 +1,11 @@
-# RIP-002 — Conceptual Model
+# RIP-003 — Conceptual Model
 
-**Document ID:** RIP-002  
+**Document ID:** RIP-003  
 **Title:** Conceptual Model  
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Constitutional (Normative)  
-**Version:** 1.0  
+**Version:** 1.1  
 **Effective Date:** 2026-07-29  
 **Owner:** Gatekeeper  
 **Parent Authority:** RIP-000 Constitution
@@ -14,7 +14,7 @@
 
 ## Purpose
 
-Define the principal organizational objects, relationships, flows, and distinctions through which RIP cultivates understanding in service of RIP-005 — Mission.
+Define the principal organizational objects, relationships, flows, and distinctions through which RIP cultivates understanding in service of RIP-001 — Mission.
 
 Understanding is the outcome of the conceptual model. It is not created by storing disconnected facts, but by relating purpose, Actors, authority, evidence, knowledge, capabilities, constraints, execution, and history with explicit provenance and uncertainty.
 
@@ -219,6 +219,66 @@ Validation
 Updated Knowledge and History
 ```
 
+## Governed Memory Model
+
+RIP's memory is divided into four governed domains:
+
+```text
+                         RIP Memory
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+          ▼                  ▼                  ▼
+Constitutional Memory  Organizational Memory  Operational Memory
+          │                  │                  │
+          └──────────────────┴──────────┬───────┘
+                                       ▼
+                         Governed Organizational Wisdom
+                    only through abstraction and governance
+```
+
+The domains are related but not interchangeable:
+
+- Constitutional Memory represents the currently effective constitutional corpus for operational use.
+- Organizational Memory belongs to a specific Organization and preserves its governed understanding and history.
+- Operational Memory preserves current and historical execution context, observations, state, and outcomes.
+- Governed Organizational Wisdom contains only approved generalizations that have crossed the organizational knowledge boundary through governance.
+
+No reasoning provider, Host, repository, or implementation may silently transfer knowledge from one memory domain to another.
+
+## Constitutional Memory Lifecycle
+
+```text
+Authoritative Constitutional Corpus
+              ↓
+Validation and Constitutional Ingestion
+              ↓
+Persistent Constitutional Memory
+              ↓
+Reasoning and Execution
+              ↓
+Lightweight Source-State Verification
+      ┌───────┴────────┐
+      │ unchanged      │ changed or invalid
+      ▼                ▼
+Continue Using      Targeted Constitutional Refresh
+Retained State          ↓
+                   Updated Constitutional State
+```
+
+The persisted Constitutional State SHALL identify, where available:
+
+- the constitutional artifacts included;
+- their governed versions and status;
+- source hashes;
+- the repository commit associated with the state;
+- ingestion and validation results;
+- dependencies and affected concepts;
+- the effective time of activation;
+- superseded constitutional states.
+
+RIP SHOULD load persisted Constitutional Memory at startup, verify that it remains current, and activate it without rereading and reinterpreting unchanged source documents. A complete rebuild is required only when durable memory is absent, corrupt, incompatible, explicitly invalidated, or otherwise unable to establish integrity.
+
 ## Self-Understanding
 
 RIP is the first organization to which this model SHALL be applied.
@@ -264,9 +324,9 @@ Repeat
 ## Related Constitutional Documents
 
 - RIP-000 — Constitution
-- RIP-001 — Lexicon
-- RIP-003 — Governance
-- RIP-004 — Organizational Learning
-- RIP-005 — Mission
+- RIP-001 — Mission
+- RIP-002 — Lexicon
+- RIP-004 — Governance
+- RIP-005 — Organizational Learning
 - RIP-006 — Governance Chronicle
 - RIP-007 — Constitutional Document Registry

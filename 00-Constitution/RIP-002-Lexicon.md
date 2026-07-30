@@ -1,11 +1,11 @@
-# RIP-001 — Lexicon
+# RIP-002 — Lexicon
 
-**Document ID:** RIP-001  
+**Document ID:** RIP-002  
 **Title:** Lexicon  
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Constitutional (Normative)  
-**Version:** 1.0  
+**Version:** 1.1  
 **Effective Date:** 2026-07-29  
 **Owner:** Gatekeeper  
 **Parent Authority:** RIP-000 Constitution
@@ -42,6 +42,21 @@ An explicit estimate of how strongly available evidence supports an interpretati
 ## Constitution
 The highest-level body of organizational authority within RIP. It defines durable principles and boundaries rather than provider or implementation detail.
 
+## Constitutional Corpus
+The complete set of currently governed constitutional artifacts registered by RIP-007. The constitutional corpus is the authoritative source from which Constitutional Memory is derived.
+
+## Constitutional Ingestion
+The governed process that reads, validates, interprets, and persists a constitutional artifact into Constitutional Memory while preserving source text, identity, version, provenance, authority, and relationships.
+
+## Constitutional Memory
+RIP's durable, versioned, provenance-preserving operational representation of the constitutional corpus. Constitutional Memory supports reasoning and execution but remains subordinate to the authoritative constitutional artifacts.
+
+## Constitutional Refresh
+The governed process that updates Constitutional Memory when a constitutional source changes, an integrity check fails, explicit revalidation is required, or an authorized rebuild is ordered. A refresh SHOULD process only the affected knowledge and dependencies unless full reconstruction is required.
+
+## Constitutional State
+The identifiable constitutional configuration active at a point in time, including the registered corpus, document versions, source hashes, repository commit where available, governance status, ingestion state, and integrity status.
+
 ## Constraint
 A condition, limitation, obligation, dependency, or boundary within which an organization or capability must operate.
 
@@ -65,6 +80,9 @@ The authorized governance role or body that may approve, reject, defer, reopen, 
 
 ## Governance
 The authorized process through which organizational changes, proposals, delegations, standards, and decisions become legitimate, traceable, reviewable, and evolvable.
+
+## Governed Organizational Wisdom
+A generalized lesson derived from validated organizational experience, stripped of organization-specific operational content, and approved through governance for retention as RIP Institutional Knowledge.
 
 ## Governance Chronicle
 The governed, non-normative record of how RIP's governance evolved, including its decisions, rationale, lineage, amendments, and milestones. RIP-006 is the canonical Governance Chronicle.
@@ -100,7 +118,7 @@ Organizational understanding represented with context, provenance, state, relati
 The traceable origin and history of knowledge, including source, time, evidence, transformations, interpretation, authorization, and later revision.
 
 ## Mission
-The current expression of what an organization is seeking to accomplish in service of its Purpose. RIP-005 is the canonical statement of RIP's Mission.
+The current expression of what an organization is seeking to accomplish in service of its Purpose. RIP-001 is the canonical statement of RIP's Mission.
 
 ## Objective
 A defined outcome an organization intends to achieve. Objectives may change without changing the organization's enduring Purpose.
@@ -108,11 +126,17 @@ A defined outcome an organization intends to achieve. Objectives may change with
 ## Observation
 A description of available evidence or organizational state that does not, by itself, assert an interpretation, recommendation, or authority.
 
+## Operational Memory
+The governed record of current and historical observations, tasks, execution state, dependencies, outcomes, and other operational context. Current operational state may be superseded, but materially relevant prior state remains traceable as history.
+
 ## Operations
 The current operational view of the organization generated from governed knowledge, relationships, dependencies, state, evidence, and authority.
 
 ## Organization
 RIP's primary object: the entity whose people, products, repositories, services, infrastructure, knowledge, authority, operations, changes, and history are represented and governed.
+
+## Organizational Memory
+Durable knowledge governed by and belonging to a specific Organization, including its evidence, decisions, operations, relationships, history, and organization-specific understanding. Organizational Memory does not become RIP Institutional Knowledge merely because RIP processes it.
 
 ## Organizational Maturity
 The degree to which an organization can accurately explain what it understands, what it does not understand, what evidence supports that understanding, what uncertainty remains, and how its knowledge becomes governed action.
@@ -174,9 +198,9 @@ Recorded evidence and evaluation determining whether an implementation satisfies
 ## Related Constitutional Documents
 
 - RIP-000 — Constitution
-- RIP-002 — Conceptual Model
-- RIP-003 — Governance
-- RIP-004 — Organizational Learning
-- RIP-005 — Mission
+- RIP-001 — Mission
+- RIP-003 — Conceptual Model
+- RIP-004 — Governance
+- RIP-005 — Organizational Learning
 - RIP-006 — Governance Chronicle
 - RIP-007 — Constitutional Document Registry

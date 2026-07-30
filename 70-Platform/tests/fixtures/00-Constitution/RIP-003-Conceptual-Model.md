@@ -1,4 +1,4 @@
-# RIP-002 — Conceptual Model
+# RIP-003 — Conceptual Model
 
 **Status:** Approved Direction
 

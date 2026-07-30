@@ -5,7 +5,7 @@
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Governance (Normative)  
-**Version:** 1.0  
+**Version:** 1.1  
 **Effective Date:** 2026-07-29  
 **Owner:** Gatekeeper  
 **Parent Authority:** RIP-000 Constitution
@@ -38,7 +38,9 @@ Each governed constitutional artifact SHALL have, directly or by an explicitly g
 | Field | Meaning |
 |---|---|
 | Document ID | Permanent unique identifier |
+| Sequence | Deterministic constitutional boot order |
 | Title | Official governed title |
+| Filename | Canonical repository filename for the artifact |
 | Classification | Constitutional, Governance, Historical, Engineering, or Informative |
 | Status | Draft, Proposed, Ratified, Superseded, or Retired |
 | Authority | Source from which the artifact derives authority |
@@ -52,16 +54,16 @@ Each governed constitutional artifact SHALL have, directly or by an explicitly g
 
 ## Initial Constitutional Registry
 
-| Document ID | Title | Classification | Status | Authority | Version | Effective Date | Owner | Parent Authority | Supersedes | Superseded By | Notes |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| RIP-000 | Constitution | Constitutional | Ratified | Organization through the Gatekeeper | 1.0 | 2026-07-29 | Gatekeeper | Self-governing constitutional authority | None | None | Highest-level normative authority in the RIP corpus |
-| RIP-001 | Lexicon | Constitutional | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Canonical governed terminology |
-| RIP-002 | Conceptual Model | Constitutional | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Canonical model of authority, evidence, history, learning, and governance |
-| RIP-003 | Governance | Governance | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Defines governance authority and decision obligations |
-| RIP-004 | Organizational Learning | Governance | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Defines the relationship between learning, evidence, and governance |
-| RIP-005 | Mission | Constitutional | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Historical mission language distributed across early governance | None | Canonical statement of why RIP exists |
-| RIP-006 | Governance Chronicle | Historical | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Informal and distributed governance history | None | Governed but non-normative institutional record |
-| RIP-007 | Constitutional Document Registry | Governance | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Informal document inventory | None | Authoritative catalog of governed constitutional artifacts |
+| Sequence | Document ID | Title | Filename | Classification | Status | Authority | Version | Effective Date | Owner | Parent Authority | Supersedes | Superseded By | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | RIP-000 | Constitution | RIP-000-Constitution.md | Constitutional | Ratified | Organization through the Gatekeeper | 1.1 | 2026-07-29 | Gatekeeper | Self-governing constitutional authority | None | None | Highest-level normative authority in the RIP corpus; establishes governed memory domains |
+| 1 | RIP-001 | Mission | RIP-001-Mission.md | Constitutional | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | Historical mission language distributed across early governance | None | Canonical statement of why RIP exists |
+| 2 | RIP-002 | Lexicon | RIP-002-Lexicon.md | Constitutional | Ratified | RIP-000 | 1.1 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Canonical governed terminology, including governed memory domains |
+| 3 | RIP-003 | Conceptual Model | RIP-003-Conceptual-Model.md | Constitutional | Ratified | RIP-000 | 1.1 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Canonical model of authority, evidence, history, learning, governance, and retained memory |
+| 4 | RIP-004 | Governance | RIP-004-Governance.md | Governance | Ratified | RIP-000 | 1.0 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Defines governance authority and decision obligations |
+| 5 | RIP-005 | Organizational Learning | RIP-005-Organizational-Learning.md | Governance | Ratified | RIP-000 | 1.1 | 2026-07-29 | Gatekeeper | RIP-000 | None | None | Defines learning, governed memory retention, constitutional refresh, evidence, and governance |
+| 6 | RIP-006 | Governance Chronicle | RIP-006-Governance-Chronicle.md | Historical | Ratified | RIP-000 | 1.1 | 2026-07-29 | Gatekeeper | RIP-000 | Informal and distributed governance history | None | Governed but non-normative institutional record; includes RIP-AMD-0001 |
+| 7 | RIP-007 | Constitutional Document Registry | RIP-007-Constitutional-Document-Registry.md | Governance | Ratified | RIP-000 | 1.1 | 2026-07-29 | Gatekeeper | RIP-000 | Informal document inventory | None | Authoritative catalog of governed constitutional artifacts and their active versions |
 
 ## Governance Rules
 
@@ -84,9 +86,9 @@ Changes to the Registry's required fields or governance rules require approval t
 ## Related Constitutional Documents
 
 - RIP-000 — Constitution
-- RIP-001 — Lexicon
-- RIP-002 — Conceptual Model
-- RIP-003 — Governance
-- RIP-004 — Organizational Learning
-- RIP-005 — Mission
+- RIP-001 — Mission
+- RIP-002 — Lexicon
+- RIP-003 — Conceptual Model
+- RIP-004 — Governance
+- RIP-005 — Organizational Learning
 - RIP-006 — Governance Chronicle

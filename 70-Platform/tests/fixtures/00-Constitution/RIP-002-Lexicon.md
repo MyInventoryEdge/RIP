@@ -1,4 +1,4 @@
-# RIP-001 — Lexicon
+# RIP-002 — Lexicon
 
 **Status:** Approved Foundational Vocabulary
 

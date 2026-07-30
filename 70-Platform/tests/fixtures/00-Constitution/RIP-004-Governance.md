@@ -1,4 +1,4 @@
-# RIP-003 — Governance
+# RIP-004 — Governance
 
 **Status:** Approved Direction
 

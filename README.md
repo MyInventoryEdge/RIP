@@ -4,7 +4,7 @@
 
 RIP gives an organization a durable way to preserve knowledge, establish authority, understand its systems, govern change, operate from current understanding, and learn without losing history.
 
-The canonical statement of why RIP exists is maintained in [`RIP-005 — Mission`](00-Constitution/RIP-005-Mission.md). The highest-level governing authority is [`RIP-000 — Constitution`](00-Constitution/RIP-000-Constitution.md).
+The canonical statement of why RIP exists is maintained in [`RIP-001 — Mission`](00-Constitution/RIP-001-Mission.md). The highest-level governing authority is [`RIP-000 — Constitution`](00-Constitution/RIP-000-Constitution.md).
 
 RIP is not merely a repository intelligence product. Repository intelligence is one specialization within a broader organizational model.
 
@@ -17,11 +17,11 @@ Read [`START-HERE.md`](START-HERE.md) for the canonical onboarding sequence and 
 ## Constitutional Corpus
 
 - [`RIP-000 — Constitution`](00-Constitution/RIP-000-Constitution.md) — enduring governing authority and boundaries
-- [`RIP-001 — Lexicon`](00-Constitution/RIP-001-Lexicon.md) — canonical governed terminology
-- [`RIP-002 — Conceptual Model`](00-Constitution/RIP-002-Conceptual-Model.md) — organizational objects, relationships, and flows
-- [`RIP-003 — Governance`](00-Constitution/RIP-003-Governance.md) — how authority is created, changed, and exercised
-- [`RIP-004 — Organizational Learning`](00-Constitution/RIP-004-Organizational-Learning.md) — how experience becomes durable governed knowledge
-- [`RIP-005 — Mission`](00-Constitution/RIP-005-Mission.md) — canonical statement of why RIP exists
+- [`RIP-001 — Mission`](00-Constitution/RIP-001-Mission.md) — canonical statement of why RIP exists
+- [`RIP-002 — Lexicon`](00-Constitution/RIP-002-Lexicon.md) — canonical governed terminology
+- [`RIP-003 — Conceptual Model`](00-Constitution/RIP-003-Conceptual-Model.md) — organizational objects, relationships, and flows
+- [`RIP-004 — Governance`](00-Constitution/RIP-004-Governance.md) — how authority is created, changed, and exercised
+- [`RIP-005 — Organizational Learning`](00-Constitution/RIP-005-Organizational-Learning.md) — how experience becomes durable governed knowledge
 - [`RIP-006 — Governance Chronicle`](00-Constitution/RIP-006-Governance-Chronicle.md) — governed, non-normative history of governance evolution
 - [`RIP-007 — Constitutional Document Registry`](00-Constitution/RIP-007-Constitutional-Document-Registry.md) — authoritative catalog of governed artifacts
 

@@ -23,7 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("status", help="Verify and list the five foundation artifacts")
+    subparsers.add_parser("status", help="Validate Constitutional Boot and list the active corpus")
     subparsers.add_parser("constitution", help="Print the Constitution")
 
     lexicon = subparsers.add_parser("lexicon", help="Read a Lexicon definition")
@@ -102,6 +102,14 @@ def main(argv: list[str] | None = None) -> int:
             for line in foundation.status_lines():
                 print(line)
             print(f"\nFoundation directory: {foundation.root}")
+            print(f"Registry version: {foundation.artifact('RIP-007').metadata.get('Version')}")
+            print(f"Corpus fingerprint: {foundation.corpus_fingerprint}")
+            print(f"Documents registered: {len(foundation.registry_entries)}")
+            print(f"Documents loaded: {len(foundation.artifacts)}")
+            print(f"Constitutional Memory source: {foundation.source}")
+            print("Validation result: valid")
+            for identifier, label in (("RIP-001", "Mission"), ("RIP-004", "Governance"), ("RIP-006", "Chronicle"), ("RIP-007", "Registry")):
+                print(f"{label} loaded: {identifier in {item.artifact_id for item in foundation.artifacts}}")
             print(f"Primary Object: {foundation.primary_object}")
             print(f"Lexicon Terms: {len(foundation.lexicon)}")
             return 0

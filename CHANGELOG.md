@@ -46,10 +46,10 @@ Repository alignment is complete. Independent engineering assessment remains pen
 - independent RIP repository structure;
 - initial README and repository map;
 - RIP-000 Constitution;
-- RIP-001 Lexicon;
-- RIP-002 Conceptual Model;
-- RIP-003 Governance;
-- RIP-004 Organizational Learning;
+- RIP-002 Lexicon;
+- RIP-003 Conceptual Model;
+- RIP-004 Governance;
+- RIP-005 Organizational Learning;
 - proposal template;
 - proposal lifecycle;
 - Evolution Register;

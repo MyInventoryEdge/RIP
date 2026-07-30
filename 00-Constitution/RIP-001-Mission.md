@@ -1,6 +1,6 @@
-# RIP-005 — Mission
+# RIP-001 — Mission
 
-**Document ID:** RIP-005  
+**Document ID:** RIP-001  
 **Title:** Mission  
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
@@ -39,6 +39,6 @@ Any amendment to this Mission SHALL occur through constitutional governance.
 ## Related Constitutional Documents
 
 - RIP-000 — Constitution
-- RIP-003 — Governance
+- RIP-004 — Governance
 - RIP-006 — Governance Chronicle
 - RIP-007 — Constitutional Document Registry

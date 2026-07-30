@@ -39,6 +39,10 @@ py -m unittest discover -s tests -v
 
 No network access, AI provider, database, or non-standard Python dependency is required.
 
+## Constitutional Boot and Memory
+
+RIP bootstraps `RIP-000` and `RIP-007`, discovers the active Constitutional Corpus from the Registry, validates every registered artifact, and retains a validated Constitutional Memory. The runtime state is stored atomically at `70-Platform/.rip-state/constitutional-memory.json`, is ignored by Git, and is reused when source signatures are unchanged. A changed registry or constitutional artifact rebuilds the validated memory; corrupt state is rejected and recovered from the authoritative Markdown corpus.
+
 ## Milestone 0003: Grounded reasoning
 
 RIP can send its governed foundation and current deterministic observation set to an OpenAI reasoning provider:

@@ -5,7 +5,7 @@
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Historical (Non-Normative)  
-**Version:** 1.0  
+**Version:** 1.1  
 **Effective Date:** 2026-07-29  
 **Owner:** Gatekeeper  
 **Parent Authority:** RIP-000 Constitution
@@ -111,10 +111,11 @@ Reconcile all recovered Historical Decision Records against the living governanc
 ### Corpus Reviewed
 
 - RIP-000 — Constitution
-- RIP-001 — Lexicon
-- RIP-002 — Conceptual Model
-- RIP-003 — Governance
-- RIP-004 — Organizational Learning
+- RIP-001 — Mission
+- RIP-002 — Lexicon
+- RIP-003 — Conceptual Model
+- RIP-004 — Governance
+- RIP-005 — Organizational Learning
 - README
 - START-HERE
 
@@ -158,7 +159,7 @@ Transform the repository from a collection of governed documents into a self-des
 
 ### Ratified Work Packages
 
-1. Create RIP-005 — Mission.
+1. Create RIP-001 — Mission.
 2. Create RIP-006 — Governance Chronicle.
 3. Create RIP-007 — Constitutional Document Registry.
 4. Align repository structure, naming, authority, and navigation.
@@ -169,21 +170,21 @@ Transform the repository from a collection of governed documents into a self-des
 
 The following artifacts were created and ratified:
 
-- RIP-005 — Mission
+- RIP-001 — Mission
 - RIP-006 — Governance Chronicle
 - RIP-007 — Constitutional Document Registry
 
 The following repository alignment changes were completed:
 
 - RIP-000 aligned with canonical Mission authority, Chronicle history, Registry authority, standardized metadata, and constitutional references. Commit: `c6fb316dc9c83ebf6c5f4c318453c7b3b1c76fc4`.
-- RIP-001 aligned with standardized metadata, Mission authority, Chronicle and Registry terminology, and constitutional references. Commit: `964f4c2f9466bea0a72b11bfb56c7fb3dc3c13cb`.
+- RIP-002 aligned with standardized metadata, Mission authority, Chronicle and Registry terminology, and constitutional references. Commit: `964f4c2f9466bea0a72b11bfb56c7fb3dc3c13cb`.
 - README converted into a constitutional repository entry point with direct corpus navigation. Commit: `911fcc217d4c7e395f91e0b37837d2d8abb3a8ab`.
 - START-HERE aligned with the ratified reading order, constitutional architecture, and primary-question navigation. Commit: `461c5b491cec664b0ee28d99c586541d44f5def3`.
-- RIP-005 metadata and authority references normalized. Commit: `f86a50defe237b883a6a62b98955a20677ab78f1`.
+- RIP-001 metadata and authority references normalized. Commit: `f86a50defe237b883a6a62b98955a20677ab78f1`.
 - RIP-007 metadata, authority, ownership, lineage, and constitutional references normalized. Commit: `f39184d66025c2831a3e749276fc8e1c110dee3f`.
-- RIP-002 metadata, Mission relationship, Chronicle distinction, and constitutional references aligned. Commit: `230a85a9d76b33f463a55e122ce1af28c48ca2c4`.
-- RIP-003 metadata, Mission relationship, Chronicle and Registry responsibilities, and constitutional references aligned. Commit: `a83646ede32ac29bdedaea711dc0d2a63b74f4dd`.
-- RIP-004 metadata, Mission relationship, Chronicle and Registry preservation responsibilities, and constitutional references aligned. Commit: `677f17a3365bab9d222801ef9f41adc075da34e8`.
+- RIP-003 metadata, Mission relationship, Chronicle distinction, and constitutional references aligned. Commit: `230a85a9d76b33f463a55e122ce1af28c48ca2c4`.
+- RIP-004 metadata, Mission relationship, Chronicle and Registry responsibilities, and constitutional references aligned. Commit: `a83646ede32ac29bdedaea711dc0d2a63b74f4dd`.
+- RIP-005 metadata, Mission relationship, Chronicle and Registry preservation responsibilities, and constitutional references aligned. Commit: `677f17a3365bab9d222801ef9f41adc075da34e8`.
 
 ### Repository Integrity Validation
 
@@ -191,8 +192,8 @@ The constitutional corpus was validated for document existence, unique registrat
 
 The validation discovered and corrected three inconsistencies:
 
-1. RIP-003 was marked Constitutional in its document metadata while the Registry classified it as Governance. The document classification was corrected. Commit: `7a750517cdf88ecf49b560d41a255b1b9f1500a6`.
-2. RIP-004 was marked Constitutional in its document metadata while the Registry classified it as Governance. The document classification was corrected. Commit: `2004a46cb6dd8766c11237f5daa1c2942505d954`.
+1. RIP-004 was marked Constitutional in its document metadata while the Registry classified it as Governance. The document classification was corrected. Commit: `7a750517cdf88ecf49b560d41a255b1b9f1500a6`.
+2. RIP-005 was marked Constitutional in its document metadata while the Registry classified it as Governance. The document classification was corrected. Commit: `2004a46cb6dd8766c11237f5daa1c2942505d954`.
 3. RIP-007 described itself as the registry of every governed artifact in RIP, although its ratified title, structure, and initial contents govern the constitutional corpus. Its scope language was corrected to remove the contradiction. Commit: `913531f091917a8074ac2f088072f6499b18fb7d`.
 
 After correction:
@@ -203,7 +204,7 @@ After correction:
 - titles, status, version, effective date, ownership, classifications, and authority chains agree with the Registry;
 - README and START-HERE links resolve to the registered constitutional artifacts;
 - related-document references identify existing constitutional artifacts;
-- RIP-005 remains the canonical Mission;
+- RIP-001 remains the canonical Mission;
 - RIP-006 remains historical and non-normative;
 - RIP-007 remains the authoritative catalog of the constitutional corpus;
 - no orphaned constitutional artifact or missing Registry entry was found.
@@ -214,17 +215,51 @@ Repository integrity validation is complete. Publication of Repository Governanc
 
 # Part V — Constitutional Amendments
 
-No constitutional amendments have yet been recorded in this Chronicle.
+## RIP-AMD-0001 — Persistent Constitutional Memory and Governed Memory Domains
 
-Future amendments SHALL record:
+**Effective Date:** 2026-07-29  
+**Initiating Proposal:** Governance Sprint 0004 — Persistent Constitutional Memory  
+**Decision Authority:** Organization through the Gatekeeper  
+**Status:** Ratified for implementation
 
-- amendment identifier;
-- effective date;
-- initiating proposal;
-- decision authority;
-- rationale;
-- affected documents;
-- validation or reconsideration requirements.
+### Rationale
+
+RIP's initial reasoning implementation received only a selected foundation evidence package. It could observe that RIP-001, RIP-006, and RIP-007 existed, but could not use their contents because those documents were not included in the active reasoning context.
+
+The Gatekeeper determined that RIP must not repeatedly reload and relearn unchanged constitutional or organizational knowledge. Memory is foundational to RIP's ability to reason consistently, preserve institutional understanding, reduce unnecessary processing, and remain traceable across sessions and provider boundaries.
+
+The amendment establishes a durable Constitutional Memory derived from, but subordinate to, the authoritative constitutional corpus. It also distinguishes Constitutional Memory, Organizational Memory, Operational Memory, and Governed Organizational Wisdom as separate governed domains with different ownership, authority, promotion, retention, and refresh rules.
+
+### Affected Documents
+
+- RIP-000 — Constitution, version 1.1
+- RIP-002 — Lexicon, version 1.1
+- RIP-003 — Conceptual Model, version 1.1
+- RIP-005 — Organizational Learning, version 1.1
+- RIP-006 — Governance Chronicle, version 1.1
+- RIP-007 — Constitutional Document Registry, version 1.1
+
+RIP-004 — Governance and RIP-001 — Mission remain unchanged at version 1.0 because this amendment does not alter Gatekeeper authority, proposal authority, or RIP's canonical Mission.
+
+### Governing Outcome
+
+RIP SHALL persist a versioned and provenance-preserving Constitutional Memory, use it during normal reasoning, verify it against authoritative source state, and refresh it only when governed change or integrity conditions require an update.
+
+Memory does not create authority. Constitutional artifacts remain authoritative, organization-specific memory remains governed by its originating Organization, operational history remains traceable, and only governance-approved generalizations may become Governed Organizational Wisdom.
+
+### Validation Requirements
+
+Implementation validation SHALL demonstrate that RIP can:
+
+1. ingest all artifacts registered in the constitutional corpus;
+2. persist and reload Constitutional Memory across process restarts;
+3. identify the active Constitutional State and its source versions;
+4. avoid complete rereading when the source state is unchanged;
+5. detect a changed constitutional artifact;
+6. perform a targeted refresh or justified full rebuild;
+7. preserve superseded Constitutional States and source provenance;
+8. keep the four memory domains distinguishable; and
+9. prevent retained memory from being represented as independent authority.
 
 ---
 
@@ -239,8 +274,10 @@ Future amendments SHALL record:
 | 2026-07-29 | Governance Chronicle authorized | Ratified |
 | 2026-07-29 | Constitutional Document Registry authorized | Ratified |
 | 2026-07-29 | Governance Sprint 0003 — Governance Implementation initiated | In progress |
-| 2026-07-29 | Constitutional corpus alignment completed through RIP-004 | Implemented |
+| 2026-07-29 | Constitutional corpus alignment completed through RIP-005 | Implemented |
 | 2026-07-29 | Constitutional repository integrity validation completed | Validated |
+| 2026-07-29 | RIP-AMD-0001 — Persistent Constitutional Memory ratified | Ratified |
+| 2026-07-29 | Governance Sprint 0004 — Persistent Constitutional Memory initiated | In progress |
 
 ---
 
@@ -253,9 +290,8 @@ New entries SHALL preserve both what was decided and why it was decided, ensurin
 ## Related Constitutional Documents
 
 - RIP-000 — Constitution
-- RIP-001 — Lexicon
-- RIP-002 — Conceptual Model
-- RIP-003 — Governance
-- RIP-004 — Organizational Learning
-- RIP-005 — Mission
+- RIP-002 — Lexicon
+- RIP-003 — Conceptual Model
+- RIP-004 — Governance
+- RIP-005 — Organizational Learning
 - RIP-007 — Constitutional Document Registry

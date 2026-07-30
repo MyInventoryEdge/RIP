@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,13 +22,7 @@ DEFAULT_EXCLUSIONS = frozenset({
     "obj",
 })
 
-CONSTITUTIONAL_NAMES = frozenset({
-    "RIP-000-Constitution.md",
-    "RIP-001-Lexicon.md",
-    "RIP-002-Conceptual-Model.md",
-    "RIP-003-Governance.md",
-    "RIP-004-Organizational-Learning.md",
-})
+CONSTITUTIONAL_NAME_RE = re.compile(r"RIP-\d{3}-.+\.md$", re.IGNORECASE)
 
 
 def find_repository_root(start: str | Path | None = None) -> Path:
@@ -193,9 +188,9 @@ def _is_test_fixture(path: Path) -> bool:
 
 
 def _file_kind(path: Path) -> str:
-    if path.name in CONSTITUTIONAL_NAMES and _is_test_fixture(path):
+    if CONSTITUTIONAL_NAME_RE.fullmatch(path.name) and _is_test_fixture(path):
         return "test_fixture_artifact"
-    if path.name in CONSTITUTIONAL_NAMES:
+    if CONSTITUTIONAL_NAME_RE.fullmatch(path.name):
         return "constitutional_artifact"
     if path.name == "pyproject.toml":
         return "python_project_manifest"
@@ -214,10 +209,10 @@ def _file_kind(path: Path) -> str:
 
 def _file_evidence(path: Path) -> tuple[str, ...]:
     evidence = ["filesystem entry is a file"]
-    if path.name in CONSTITUTIONAL_NAMES and _is_test_fixture(path):
+    if CONSTITUTIONAL_NAME_RE.fullmatch(path.name) and _is_test_fixture(path):
         evidence.append("filename matches an approved RIP foundation artifact")
         evidence.append("path is beneath a tests/fixtures boundary")
-    elif path.name in CONSTITUTIONAL_NAMES:
+    elif CONSTITUTIONAL_NAME_RE.fullmatch(path.name):
         evidence.append("filename matches an approved RIP foundation artifact")
     elif path.name == "pyproject.toml":
         evidence.append("filename is pyproject.toml")

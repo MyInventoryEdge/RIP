@@ -1,4 +1,4 @@
-# RIP-004 — Organizational Learning
+# RIP-005 — Organizational Learning
 
 **Status:** Approved Direction
 

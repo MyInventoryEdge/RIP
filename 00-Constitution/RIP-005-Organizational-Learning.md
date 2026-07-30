@@ -1,11 +1,11 @@
-# RIP-004 — Organizational Learning
+# RIP-005 — Organizational Learning
 
-**Document ID:** RIP-004  
+**Document ID:** RIP-005  
 **Title:** Organizational Learning  
 **Status:** Ratified  
 **Authority:** RIP-000 Constitution  
 **Classification:** Governance (Normative)  
-**Version:** 1.0  
+**Version:** 1.1  
 **Effective Date:** 2026-07-29  
 **Owner:** Gatekeeper  
 **Parent Authority:** RIP-000 Constitution
@@ -14,7 +14,7 @@
 
 ## Purpose
 
-Organizational learning converts experience into durable, governed knowledge and improved understanding in service of RIP-005 — Mission.
+Organizational learning converts experience into durable, governed knowledge and improved understanding in service of RIP-001 — Mission.
 
 ## Core Principle
 
@@ -148,16 +148,64 @@ RIP SHALL support repeated reassessment as evidence, implementations, providers,
 
 Organizational maturity is not the absence of unknowns. It is the ability to distinguish accurately among what is understood, what is inferred, what is governed, what is uncertain, and what remains undiscovered.
 
-## Related Constitutional Documents
+## Persistent Governed Memory
 
-- RIP-000 — Constitution
-- RIP-001 — Lexicon
-- RIP-002 — Conceptual Model
-- RIP-003 — Governance
-- RIP-005 — Mission
-- RIP-006 — Governance Chronicle
-- RIP-007 — Constitutional Document Registry
+RIP SHALL retain governed understanding so that unchanged knowledge is not repeatedly reloaded, relearned, or reinterpreted.
 
+Retention SHALL be durable across reasoning requests, process restarts, provider changes, and Host sessions to the extent permitted by approved implementation and security boundaries. The authoritative source, provenance, authority state, and history of retained knowledge SHALL remain available for inspection.
+
+Retained memory SHALL be refreshed when its governing source, evidence, authority, ownership, scope, or effective state changes. A refresh SHALL preserve the prior state and the governance or evidence that caused the change.
+
+RIP SHALL prefer targeted refresh over complete reconstruction. Full reconstruction MAY occur when retained memory is missing, corrupt, incompatible, explicitly invalidated, or cannot be verified against its authoritative sources.
+
+Persistence does not convert knowledge into authority. A retained interpretation, recommendation, or inference remains an interpretation, recommendation, or inference unless governance changes its authority state.
+
+## Constitutional Ingestion and Retention
+
+On initial constitutional initialization, RIP SHALL:
+
+1. identify the complete corpus through RIP-007;
+2. validate required artifacts, identities, versions, status, and authority relationships;
+3. ingest the complete constitutional content;
+4. preserve the source text and section-level provenance;
+5. construct the operational Constitutional Memory;
+6. record the resulting Constitutional State;
+7. persist that state durably; and
+8. validate that the persisted state can be reconstructed and traced to its sources.
+
+During normal operation, RIP SHALL use retained Constitutional Memory. It SHALL NOT require the complete corpus to be reread for each reasoning request.
+
+Before activating retained Constitutional Memory, RIP SHALL perform lightweight verification sufficient to determine whether the authoritative source state has changed. Verification MAY use registered versions, content hashes, repository state, governance events, or equivalent governed identifiers.
+
+When change is detected, RIP SHALL:
+
+1. identify changed artifacts and affected dependencies;
+2. ingest the changed source material;
+3. update only the affected constitutional knowledge where reliable;
+4. preserve the prior Constitutional State;
+5. record the source change and governance authority;
+6. validate internal consistency and traceability; and
+7. activate the new Constitutional State only after successful validation.
+
+RIP SHALL be able to state which Constitutional State governed a material conclusion or action.
+
+## Memory-Domain Learning Rules
+
+### Constitutional Memory
+
+Constitutional Memory is learned only through governed constitutional ingestion. It SHALL NOT be changed by ordinary observation, inference, repetition, model output, or operational convenience.
+
+### Organizational Memory
+
+Organizational Memory SHALL retain organization-specific knowledge under the authority and ownership of the originating Organization. New evidence or governance may supersede its active state, but materially relevant prior states SHALL remain traceable.
+
+### Operational Memory
+
+Operational Memory SHALL retain the state and history necessary to understand work, execution, dependencies, observations, and outcomes. Operational records MAY have governed retention and archival rules, but SHALL NOT be silently discarded when doing so would destroy material provenance, decision context, validation evidence, or organizational learning.
+
+### Governed Organizational Wisdom
+
+Governed Organizational Wisdom MAY be retained by RIP only after validated experience has been generalized, stripped of organization-specific operational content, proposed, reviewed, and approved through governance.
 
 ## Governed Organizational Wisdom
 
@@ -211,3 +259,12 @@ Governance Review
 
 Every item of Governed Organizational Wisdom SHALL retain traceable provenance to the originating validated experience while preventing disclosure of organization-specific operational information.
 
+## Related Constitutional Documents
+
+- RIP-000 — Constitution
+- RIP-001 — Mission
+- RIP-002 — Lexicon
+- RIP-003 — Conceptual Model
+- RIP-004 — Governance
+- RIP-006 — Governance Chronicle
+- RIP-007 — Constitutional Document Registry

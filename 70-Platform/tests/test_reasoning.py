@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +14,7 @@ from rip.reasoning.openai_provider import OpenAIProvider
 from rip.reasoning.prompt_builder import SYSTEM_INSTRUCTIONS, build_evidence_package, serialize_evidence_package
 from rip.reasoning.service import ask_repository
 
-FIXTURE_FOUNDATION = Path(__file__).parent / "fixtures" / "00-Constitution"
+FIXTURE_FOUNDATION = Path(__file__).resolve().parents[2] / "00-Constitution"
 
 
 class FakeProvider:
@@ -48,9 +49,7 @@ class FakeClient:
 
 class ReasoningTests(unittest.TestCase):
     def _repository(self, root: Path) -> None:
-        (root / "00-Constitution").mkdir()
-        for source in FIXTURE_FOUNDATION.iterdir():
-            (root / "00-Constitution" / source.name).write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        shutil.copytree(FIXTURE_FOUNDATION, root / "00-Constitution")
         (root / "70-Platform").mkdir()
         (root / "README.md").write_text("# Example", encoding="utf-8")
 
@@ -62,7 +61,8 @@ class ReasoningTests(unittest.TestCase):
             encoded = serialize_evidence_package(package)
             decoded = json.loads(encoded)
             self.assertEqual(decoded["schema"], "rip.reasoning.evidence.v1")
-            self.assertEqual(len(decoded["foundation"]["artifacts"]), 5)
+            self.assertEqual(len(decoded["foundation"]["artifacts"]), 8)
+            self.assertEqual([item["artifact_id"] for item in decoded["foundation"]["artifacts"]], [f"RIP-{index:03}" for index in range(8)])
             self.assertTrue(any(item["observation_id"].startswith("obs-") for item in decoded["observation_set"]["observations"]))
 
     def test_service_builds_request_without_provider_filesystem_access(self):

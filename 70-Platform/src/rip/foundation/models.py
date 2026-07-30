@@ -32,25 +32,69 @@ class FoundationArtifact:
 
 
 @dataclass(frozen=True, slots=True)
-class Foundation:
+class RegistryEntry:
+    sequence: int
+    document_id: str
+    title: str
+    filename: str
+    version: str
+    status: str
+    fields: Mapping[str, str]
+
+    @property
+    def active(self) -> bool:
+        return self.status.casefold() in {"ratified", "approved", "active"}
+
+
+@dataclass(frozen=True, slots=True)
+class ConstitutionalMemory:
     root: Path
-    constitution: FoundationArtifact
-    lexicon_artifact: FoundationArtifact
-    conceptual_model: FoundationArtifact
-    governance: FoundationArtifact
-    learning: FoundationArtifact
+    artifacts: tuple[FoundationArtifact, ...]
+    registry_entries: tuple[RegistryEntry, ...]
+    document_hashes: Mapping[str, str]
+    registry_hash: str
+    corpus_fingerprint: str
+    memory_schema_version: str
+    validation_timestamp: str
+    source: str
     lexicon: Mapping[str, str]
     primary_object: str
 
+    def artifact(self, document_id: str) -> FoundationArtifact:
+        for item in self.artifacts:
+            if item.artifact_id == document_id:
+                return item
+        raise KeyError(f"Constitutional artifact not found: {document_id}")
+
+    def by_filename(self, filename: str) -> FoundationArtifact:
+        for item in self.artifacts:
+            if item.path.name == filename:
+                return item
+        raise KeyError(f"Constitutional artifact not found: {filename}")
+
     @property
-    def artifacts(self) -> tuple[FoundationArtifact, ...]:
-        return (
-            self.constitution,
-            self.lexicon_artifact,
-            self.conceptual_model,
-            self.governance,
-            self.learning,
-        )
+    def constitution(self) -> FoundationArtifact:
+        return self.artifact("RIP-000")
+
+    @property
+    def mission(self) -> FoundationArtifact:
+        return self.artifact("RIP-001")
+
+    @property
+    def lexicon_artifact(self) -> FoundationArtifact:
+        return self.artifact("RIP-002")
+
+    @property
+    def conceptual_model(self) -> FoundationArtifact:
+        return self.artifact("RIP-003")
+
+    @property
+    def governance(self) -> FoundationArtifact:
+        return self.artifact("RIP-004")
+
+    @property
+    def learning(self) -> FoundationArtifact:
+        return self.artifact("RIP-005")
 
     def term(self, name: str) -> str:
         for term, definition in self.lexicon.items():
@@ -59,10 +103,10 @@ class Foundation:
         raise KeyError(f"Lexicon term not found: {name}")
 
     def status_lines(self) -> tuple[str, ...]:
-        return tuple(
-            f"{artifact.artifact_id}: Loaded - {artifact.title}"
-            for artifact in self.artifacts
-        )
+        return tuple(f"{item.artifact_id}: Loaded - {item.title}" for item in self.artifacts)
+
+
+Foundation = ConstitutionalMemory
 
 
 def freeze_mapping(values: Mapping[str, str]) -> Mapping[str, str]:
