@@ -134,4 +134,16 @@ decision prompt is a version-controlled asset at `prompts/architectural_decision
 
 ## Large primary evidence
 
-RIP sends selected primary evidence losslessly. If the complete request exceeds the local safe input budget, RIP sends nothing and reports that selective retrieval is required. Future retrieval will use generic artifact-specific chunkers and pluggable retrieval strategies; it is not implemented yet.
+RIP sends in-budget primary evidence losslessly and unchanged. When exactly one supplied
+primary artifact makes the complete request exceed the local safe input budget, RIP
+automatically applies deterministic lexical retrieval when the artifact is a valid
+canonical-session JSON artifact. It selects only complete, unchanged governed chunks from
+that one artifact using the user question and an explicit budget computed by reasoning
+orchestration. The provider receives the resulting evidence through the same evidence
+package and remains unaware that retrieval occurred.
+
+Retrieval audit data remains internal to RIP for provenance, reproducibility, diagnostics,
+and validation. It is not reasoning context. If no chunks match, if the artifact has no
+compatible chunker, or if multiple oversized artifacts are supplied, RIP fails locally and
+does not call the provider. Additional artifact-specific chunkers and multi-artifact budget
+allocation are outside the current capability.

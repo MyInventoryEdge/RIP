@@ -6,13 +6,15 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from rip.foundation import load_foundation
 from rip.observation import observe_filesystem
 from rip.reasoning.models import ReasoningRequest
 from rip.reasoning.openai_provider import OpenAIProvider
 from rip.reasoning.prompt_builder import SYSTEM_INSTRUCTIONS, build_evidence_package, serialize_evidence_package
-from rip.reasoning.service import ask_repository
+from rip.reasoning import service
+from rip.reasoning.service import RetrievalDecision, ask_repository
 
 FIXTURE_FOUNDATION = Path(__file__).resolve().parents[2] / "00-Constitution"
 
@@ -85,20 +87,85 @@ class ReasoningTests(unittest.TestCase):
             package = json.loads(provider.request.evidence_json.split("\n\n", 1)[1])
             self.assertEqual(package["primary_evidence"]["artifacts"][0]["content"], "exact primary evidence")
 
-    def test_oversized_primary_evidence_fails_before_provider(self):
+    @staticmethod
+    def _canonical_session(message_count: int = 100, markdown: str = "needle") -> str:
+        messages = [
+            {"source_message_id": f"message-{index}", "source_order": index, "participant_id": "role:user", "role": "user", "markdown": markdown + " " + ("x" * 23_900)}
+            for index in range(message_count)
+        ]
+        return json.dumps({"session_id": "session", "source_format": "test", "messages": messages, "validation": {"passed": True}}, ensure_ascii=False)
+
+    def test_oversized_canonical_session_automatically_retrieves_selected_evidence(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            artifact = root / "large.json"
+            artifact.write_text(self._canonical_session(), encoding="utf-8")
+            provider = FakeProvider()
+            ask_repository("needle", root=root, provider=provider, primary_paths=["large.json"])
+            package = json.loads(provider.request.evidence_json.split("\n\n", 1)[1])
+            selected = package["primary_evidence"]["artifacts"][0]
+            self.assertTrue(selected["chunked"])
+            self.assertIn("needle", selected["content"])
+            self.assertLess(len(selected["content"]), artifact.stat().st_size)
+            self.assertNotIn("retrieval_fingerprint", package)
+
+    def test_oversized_unsupported_artifact_fails_before_provider(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); self._repository(root)
             (root / "large.txt").write_text("x" * 2_500_000, encoding="utf-8")
             provider = FakeProvider()
-            with self.assertRaisesRegex(ValueError, "Primary evidence is too large") as raised:
+            with self.assertRaisesRegex(ValueError, "No compatible governed chunker"):
                 ask_repository("Read it", root=root, provider=provider, primary_paths=["large.txt"])
             self.assertIsNone(provider.request)
-            message = str(raised.exception)
-            self.assertIn("No content was sent to the language model.", message)
-            self.assertIn("- large.txt", message)
-            self.assertIn("approximately", message)
-            self.assertIn("800,000 tokens", message)
-            self.assertIn("Selective retrieval is required.", message)
+
+    def test_retrieval_decision_budget_partial_coverage_and_determinism(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            (root / "large.json").write_text(self._canonical_session(), encoding="utf-8")
+            foundation = load_foundation(root / "00-Constitution")
+            observations = observe_filesystem(root)
+            primary = service.load_primary_evidence(root, observations, ["large.json"])
+            budgets = []
+            real_engine = service.DeterministicLexicalRetrievalEngine
+            class RecordingEngine:
+                def retrieve(self, *args, **kwargs):
+                    budgets.append(kwargs["token_budget"])
+                    return real_engine().retrieve(*args, **kwargs)
+            with patch.object(service, "DeterministicLexicalRetrievalEngine", RecordingEngine):
+                first, first_decision = service._prepare_primary_evidence(foundation, observations, "needle", primary)
+                second, second_decision = service._prepare_primary_evidence(foundation, observations, "needle", primary)
+            self.assertIsInstance(first_decision, RetrievalDecision)
+            self.assertTrue(first_decision.oversized_request_detected)
+            self.assertTrue(first_decision.retrieval_performed)
+            self.assertFalse(first_decision.retrieval_failed)
+            self.assertGreater(first_decision.selected_chunk_count, 0)
+            self.assertEqual(first_decision.coverage_status.value, "partial")
+            self.assertEqual(first_decision.retrieval_fingerprint, second_decision.retrieval_fingerprint)
+            self.assertEqual(first, second)
+            self.assertEqual(len(budgets), 2)
+            self.assertGreater(budgets[0], 0)
+            self.assertEqual(budgets[0], budgets[1])
+
+    def test_retrieval_decision_reports_complete_coverage_when_all_chunks_fit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            (root / "session.json").write_text(self._canonical_session(message_count=3), encoding="utf-8")
+            foundation = load_foundation(root / "00-Constitution")
+            observations = observe_filesystem(root)
+            primary = service.load_primary_evidence(root, observations, ["session.json"])
+            complete = service._build_request("needle", None, build_evidence_package(foundation, observations, "needle", primary))
+            with patch.object(service, "SAFE_INPUT_TOKEN_BUDGET", int(service._estimated_tokens(complete)) - 1):
+                _prepared, decision = service._prepare_primary_evidence(foundation, observations, "needle", primary)
+            self.assertEqual(decision.coverage_status.value, "complete")
+
+    def test_zero_result_does_not_call_provider(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            (root / "large.json").write_text(self._canonical_session(markdown="unrelated"), encoding="utf-8")
+            provider = FakeProvider()
+            with self.assertRaisesRegex(ValueError, "selected no evidence"):
+                ask_repository("needle", root=root, provider=provider, primary_paths=["large.json"])
+            self.assertIsNone(provider.request)
 
     def test_openai_provider_uses_responses_api_and_reports_usage(self):
         client = FakeClient()
