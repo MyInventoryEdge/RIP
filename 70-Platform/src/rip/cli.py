@@ -12,6 +12,8 @@ from .interpretation.service import DEFAULT_CHUNK_CHARACTERS, DEFAULT_MODEL as I
 from .observation import observe_filesystem
 from .reasoning import DEFAULT_MODEL, ask_repository
 from .session import parse_session
+from .voice import VoiceManager
+from .voice.manager import TEST_PHRASE
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,6 +74,19 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"OpenAI model identifier; defaults to RIP_OPENAI_MODEL or {DEFAULT_MODEL}",
     )
     ask.add_argument("--show-metadata", action="store_true", help="Print provider, model, response ID, and token usage")
+    ask.add_argument("--primary-evidence", action="append", default=[], help="Repository-relative file to load as primary task evidence; may be repeated")
+    voice = subparsers.add_parser("voice", help="Configure and use spoken output")
+    voice_sub = voice.add_subparsers(dest="voice_command", required=True)
+    voice_sub.add_parser("status"); voice_sub.add_parser("list"); voice_sub.add_parser("enable"); voice_sub.add_parser("disable"); voice_sub.add_parser("test")
+    preview = voice_sub.add_parser("preview"); preview.add_argument("voice", nargs="?"); preview.add_argument("--all", action="store_true"); preview.add_argument("--yes", action="store_true"); preview.add_argument("--output-dir")
+    voice_sub.add_parser("microphones")
+    record = voice_sub.add_parser("record"); record.add_argument("--output", required=True); record.add_argument("--max-seconds", type=int, default=30); record.add_argument("--device", type=int)
+    listen = voice_sub.add_parser("listen"); listen.add_argument("--output"); listen.add_argument("--keep-audio", action="store_true"); listen.add_argument("--max-seconds", type=int, default=30); listen.add_argument("--device", type=int); listen.add_argument("--language")
+    set_voice = voice_sub.add_parser("set"); set_voice.add_argument("voice")
+    set_model = voice_sub.add_parser("set-model"); set_model.add_argument("model")
+    set_speed = voice_sub.add_parser("set-speed"); set_speed.add_argument("speed", type=float)
+    set_instructions = voice_sub.add_parser("set-instructions"); set_instructions.add_argument("instructions")
+    speak = voice_sub.add_parser("speak"); speak.add_argument("text"); speak.add_argument("--output"); speak.add_argument("--no-play", action="store_true")
     return parser
 
 
@@ -106,8 +121,52 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Candidates rendered to Markdown: {result['candidates']}")
             print("Validation: PASS")
             return 0
+        if args.command == "voice":
+            manager = VoiceManager(Path.cwd() / ".rip-voice" / "config.json")
+            if args.voice_command == "microphones":
+                for item in manager.list_microphones(): print(f"{'* ' if item.default else '  '}{item.index}: {item.name} ({item.channels} input channels, {item.sample_rate} Hz)")
+                return 0
+            if args.voice_command in {"record", "listen"}:
+                import tempfile
+                output = Path(args.output) if args.output else Path(tempfile.mkstemp(suffix=".wav")[1])
+                print("Listening...\nSpeak now.")
+                manager.record(output, device=args.device, maximum_seconds=args.max_seconds)
+                print(f"Recording stopped: {output}")
+                if args.voice_command == "record": return 0
+                print("Transcribing...")
+                text = manager.transcribe(output, language=args.language)
+                print(f"You said: {text}")
+                if not args.keep_audio and not args.output: output.unlink(missing_ok=True)
+                return 0
+            if args.voice_command == "status":
+                config = manager.load(); print(f"Enabled: {config.enabled}\nProvider: {config.provider}\nModel: {config.model}\nVoice: {config.voice}\nSpeed: {config.speed}\nInstructions: {'present' if config.instructions else 'absent'}\nPlayback enabled: {config.playback_enabled}\nConfiguration: {manager.path}\nAPI key available: {'yes' if manager.provider.ready() else 'no'}"); return 0
+            if args.voice_command == "list":
+                current = manager.load().voice
+                for voice_name in manager.provider.list_voices(): print(f"{'* ' if voice_name == current else '  '}{voice_name}")
+                return 0
+            if args.voice_command == "preview":
+                voices = manager.provider.list_voices() if args.all else (args.voice or manager.load().voice,)
+                if args.all and not args.yes and input(f"Preview {len(voices)} voices? This will make {len(voices)} billable speech requests. [y/N] ").strip().lower() != "y": print("Preview cancelled."); return 0
+                try:
+                    for name in voices: print(f"Previewing voice: {name}")
+                    results, error = manager.preview(voices, output_dir=args.output_dir)
+                except KeyboardInterrupt: print(f"Preview interrupted after {len(locals().get('results', []))} voices."); return 1
+                for result in results:
+                    if result.output_path: print(f"Generated: {result.output_path}")
+                if error: print(error); return 1
+                return 0
+            if args.voice_command == "set": manager.update(voice=args.voice)
+            elif args.voice_command == "set-model": manager.update(model=args.model)
+            elif args.voice_command == "set-speed": manager.update(speed=args.speed)
+            elif args.voice_command == "set-instructions": manager.update(instructions=args.instructions)
+            elif args.voice_command == "enable": manager.update(enabled=True)
+            elif args.voice_command == "disable": manager.update(enabled=False)
+            else:
+                result = manager.speak(TEST_PHRASE if args.voice_command == "test" else args.text, output_path=getattr(args, "output", None), play=not getattr(args, "no_play", False))
+                print(result.message); return 0 if result.success else 1
+            print("Voice configuration saved."); return 0
         if args.command == "ask":
-            result = ask_repository(args.question, root=args.root, model=args.model)
+            result = ask_repository(args.question, root=args.root, model=args.model, primary_paths=args.primary_evidence)
             print("RIP Grounded Interpretation\n")
             print(result.answer)
             if result.unknown_observation_ids:

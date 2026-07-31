@@ -1,0 +1,31 @@
+{
+  "input": "C:\\RIP\\tools\\chatgpt-exporter\\validation-export-complete\\conversation.json",
+  "source_format": "chatgpt-conversation-json",
+  "outputs": [
+    "canonical-session.json",
+    "canonical-session.md"
+  ],
+  "validation": {
+    "passed": true,
+    "errors": [],
+    "warnings": [
+      "The source export has no upstream ChatGPT turn IDs.",
+      "The exported index values are not unique; canonical source message identifiers are deterministic source-order values, while raw indexes are retained in source metadata."
+    ],
+    "input_message_count": 1334,
+    "output_message_count": 1334
+  },
+  "statistics": {
+    "message_count": 1334,
+    "participant_count": 2,
+    "code_block_count": 1559,
+    "link_count": 27,
+    "image_count": 0,
+    "attachment_count": 8,
+    "role_counts": {
+      "assistant": 667,
+      "user": 667
+    }
+  },
+  "unrepresented_source_fields": []
+}

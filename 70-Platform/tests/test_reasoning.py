@@ -76,6 +76,30 @@ class ReasoningTests(unittest.TestCase):
             self.assertIn("rip.reasoning.evidence.v1", provider.request.evidence_json)
             self.assertIn("Do not claim direct filesystem access", SYSTEM_INSTRUCTIONS)
 
+    def test_small_primary_evidence_reaches_provider_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            artifact = root / "evidence.txt"; artifact.write_text("exact primary evidence", encoding="utf-8")
+            provider = FakeProvider()
+            ask_repository("Read it", root=root, provider=provider, primary_paths=["evidence.txt"])
+            package = json.loads(provider.request.evidence_json.split("\n\n", 1)[1])
+            self.assertEqual(package["primary_evidence"]["artifacts"][0]["content"], "exact primary evidence")
+
+    def test_oversized_primary_evidence_fails_before_provider(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            (root / "large.txt").write_text("x" * 2_500_000, encoding="utf-8")
+            provider = FakeProvider()
+            with self.assertRaisesRegex(ValueError, "Primary evidence is too large") as raised:
+                ask_repository("Read it", root=root, provider=provider, primary_paths=["large.txt"])
+            self.assertIsNone(provider.request)
+            message = str(raised.exception)
+            self.assertIn("No content was sent to the language model.", message)
+            self.assertIn("- large.txt", message)
+            self.assertIn("approximately", message)
+            self.assertIn("800,000 tokens", message)
+            self.assertIn("Selective retrieval is required.", message)
+
     def test_openai_provider_uses_responses_api_and_reports_usage(self):
         client = FakeClient()
         provider = OpenAIProvider(client=client)

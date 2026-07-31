@@ -1,0 +1,17 @@
+{
+  "input": "C:\\Temp\\rip-canonical-session-validation\\canonical-session.json",
+  "outputs": [
+    "candidate-knowledge.json",
+    "interpretation-report.md"
+  ],
+  "knowledge_type": "architectural_decision",
+  "model": "gpt-5.5",
+  "prompt_version": "1",
+  "chunks_processed": 26,
+  "processing_seconds": 1322.1537833999973,
+  "candidate_count": 261,
+  "messages_with_evidence": 397,
+  "rejected_candidates": 0,
+  "validation_failures": [],
+  "validation": "PASS"
+}

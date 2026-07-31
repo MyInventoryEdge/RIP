@@ -5,3 +5,8 @@ Thumbs.db
 .vscode/
 .idea/
 70-Platform/.rip-state/
+70-Platform/.rip-voice/
+70-Platform/*.wav
+# Runtime artifacts
+rip-console-error.log
+*.wav

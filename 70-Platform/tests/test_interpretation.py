@@ -113,7 +113,8 @@ class InterpretationTests(unittest.TestCase):
         self.assertEqual("SQLite is adopted.", resolved[0]["evidence"][0]["excerpt"])
 
     def test_production_fixture_loads_and_chunks_without_provider_calls(self) -> None:
-        fixture = Path(r"C:\Temp\rip-canonical-session-validation\canonical-session.json")
+        from rip.paths import production_canonical_session
+        fixture = production_canonical_session()
         if not fixture.exists():
             self.skipTest("Production fixture is not available at its validated local path.")
         payload = json.loads(fixture.read_text(encoding="utf-8"))

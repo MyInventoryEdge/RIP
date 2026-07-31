@@ -18,7 +18,8 @@ class RendererTests(unittest.TestCase):
    for p in ({'candidates':[{}]}, {'candidates':[candidate()['candidates'][0],candidate()['candidates'][0]]}):
     with self.assertRaises(ValueError): load_candidates(self.write(d,p))
  def test_production(self):
-  p=Path(r'C:\Temp\rip-interpretation-production\candidate-knowledge.json')
+  from rip.paths import production_candidate_knowledge
+  p=production_candidate_knowledge()
   if not p.exists(): self.skipTest('fixture unavailable')
   payload=load_candidates(p)
   self.assertGreater(len(payload['candidates']),0)

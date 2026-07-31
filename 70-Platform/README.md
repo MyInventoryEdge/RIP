@@ -53,6 +53,23 @@ rip parse-session C:\RIP\tools\chatgpt-exporter\validation-export-complete\conve
 
 The output directory contains `canonical-session.json` (structured canonical data), `canonical-session.md` (a readable full transcript), and `parser-manifest.json` (source, statistics, warnings, and validation result). Parsing fails rather than producing output when counts, order, source identifiers, or Markdown preservation cannot be validated. The current ChatGPT exporter supplies no upstream turn ID and its viewport-local `index` values may repeat; RIP retains each raw index in source metadata, uses deterministic source-order identifiers, and records the limitation as a warning.
 
+## Voice interaction
+
+Voice is an optional interface preference, not constitutional state. It uses `OPENAI_API_KEY`, OpenAI speech synthesis and transcription, and a microphone accessible through `sounddevice`. Configuration is local at `70-Platform/.rip-voice/config.json` and is ignored by Git.
+
+The Reasoning Console supports typed and spoken questions. Click **Talk** or press **F4**, speak a question, and RIP places the recognized text into the normal question entry before submitting through the existing reasoning workflow. RIP automatically speaks completed responses; **Mute** disables only response playback. **Voice Status** shows the configured and resolved microphone, voice, speech-enabled setting, and transcription model.
+
+Voice capture ends after configured end-of-speech silence (default 1.5 seconds), or after the configured maximum duration (default 60 seconds). While recording, the Talk button becomes **Stop** for immediate finalization and transcription. The console shows each voice state—Listening, silence finalization, Transcribing, Reasoning, speech synthesis, and Playing—and emits duration information through the voice logger. The local voice configuration also supports `maximum_recording_seconds`, `minimum_speech_seconds`, `silence_timeout_seconds`, `silence_threshold`, `show_timing`, and `auto_stop_enabled`.
+
+Launch the console from `C:\RIP\70-Platform`:
+
+```powershell
+$env:PYTHONPATH = "src"
+& "C:\INVENTORY_EDGE\runtime\python314\python.exe" -m rip.console.app
+```
+
+For command-line configuration and diagnostics, use `rip voice status`, `rip voice microphones`, `rip voice set-microphone <index>`, `rip voice record --output sample.wav`, `rip voice listen --output sample.wav`, and `rip voice speak "Hello" --output hello.wav`. If voice input is unavailable, confirm that a microphone is connected and listed by `rip voice microphones`; if speech fails, confirm `OPENAI_API_KEY` is present in the process environment. Generated WAV files are preserved when playback fails so they can be opened directly for troubleshooting.
+
 ## Milestone 0003: Grounded reasoning
 
 RIP can send its governed foundation and current deterministic observation set to an OpenAI reasoning provider:
@@ -96,8 +113,7 @@ The console includes:
 - clear conversation and friendly error presentation.
 
 This console is intentionally temporary and contains no separate reasoning implementation. It calls `rip.reasoning.ask_repository` directly so it can later be replaced by the permanent application UI without changing RIP's reasoning architecture.
-
-## Knowledge Interpretation
+# Knowledge Interpretation
 
 RIP can turn a validated `canonical-session.json` into traceable candidate
 architectural decisions. It never alters the session and does not treat a
@@ -107,7 +123,7 @@ Python Unicode code-point positions in the source Markdown.
 
 ```powershell
 $env:PYTHONPATH = "src"
-python -m rip.cli interpret C:\Temp\rip-canonical-session-validation\canonical-session.json --output C:\Temp\rip-interpretation
+python -m rip.cli interpret C:\RIP\60-Reference\Knowledge\Session-Archives\chatgpt-production-0001\canonical-session.json --output C:\Temp\rip-interpretation
 ```
 
 The output directory contains `candidate-knowledge.json`,
@@ -116,12 +132,6 @@ fails when the input session did not pass parser validation or an AI response
 cannot be validated after one explicit repair attempt. The architectural
 decision prompt is a version-controlled asset at `prompts/architectural_decisions.md`.
 
-## Candidate review
+## Large primary evidence
 
-Render candidate knowledge without an AI call or network dependency:
-
-```powershell
-rip render-knowledge C:\Temp\rip-interpretation-production\candidate-knowledge.json --output C:\Temp\rip-renderer-validation
-```
-
-This creates self-contained `candidate-review.html` and complete `candidate-review.md` artifacts. Rendering fails on malformed candidates rather than omitting them.
+RIP sends selected primary evidence losslessly. If the complete request exceeds the local safe input budget, RIP sends nothing and reports that selective retrieval is required. Future retrieval will use generic artifact-specific chunkers and pluggable retrieval strategies; it is not implemented yet.
