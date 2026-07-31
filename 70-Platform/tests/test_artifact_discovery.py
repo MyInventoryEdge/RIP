@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+from tempfile import TemporaryDirectory
 
 from rip.discovery import CompatibilityStatus, discover_artifacts
+from rip.foundation import load_foundation
+from rip.observation import observe_filesystem
 from rip.observation.models import Observation, ObservationSet
 
 
@@ -82,13 +86,14 @@ class ArtifactDiscoveryTests(unittest.TestCase):
         self.assertEqual(candidates["60-Reference/Knowledge/archive/canonical-session.json"].compatibility, CompatibilityStatus.CHUNK_RETRIEVAL_COMPATIBLE)
         self.assertEqual(candidates["70-Platform/src/rip/voice/manager.py"].compatibility, CompatibilityStatus.PRIMARY_LOAD_COMPATIBLE)
         self.assertEqual(result.report.diagnostics.artifacts_observed, 10)
-        self.assertEqual(result.report.diagnostics.artifacts_selected, 0)
+        self.assertEqual(result.report.diagnostics.artifacts_selected, 1)
         self.assertTrue(result.report.diagnostics.searchable_terms_present)
 
     def test_manual_constraints_are_reported_and_conflicts_are_rejected(self) -> None:
         result = discover_artifacts("voice", self.observations, self.foundation, candidate_limit=1, manual_inclusions=("70-Platform/src/rip/voice/manager.py",), manual_exclusions=("assets/logo.png",))
         self.assertEqual(result.report.manual_inclusions, ("70-Platform/src/rip/voice/manager.py",))
         self.assertEqual(result.report.manual_exclusions, ("assets/logo.png",))
+        self.assertEqual(result.selected_candidates[0].repository_relative_path, "70-Platform/src/rip/voice/manager.py")
         with self.assertRaisesRegex(ValueError, "must not overlap"):
             discover_artifacts("voice", self.observations, self.foundation, candidate_limit=1, manual_inclusions=("a.md",), manual_exclusions=("a.md",))
 
@@ -98,6 +103,36 @@ class ArtifactDiscoveryTests(unittest.TestCase):
         self.assertTrue(all(entry.score == 0 for entry in empty.report.rankings))
         with self.assertRaisesRegex(ValueError, "candidate limit"):
             discover_artifacts("voice", self.observations, self.foundation, candidate_limit=0)
+
+    def test_selection_uses_positive_scores_and_manual_exclusion_wins(self) -> None:
+        automatic = discover_artifacts("parser", self.observations, self.foundation, candidate_limit=1)
+        self.assertEqual([item.repository_relative_path for item in automatic.selected_candidates], ["60-Reference/Knowledge/archive/parser-manifest.json"])
+        excluded = discover_artifacts("parser", self.observations, self.foundation, candidate_limit=2, manual_exclusions=("60-Reference/Knowledge/archive/parser-manifest.json",))
+        self.assertNotIn("60-Reference/Knowledge/archive/parser-manifest.json", [item.repository_relative_path for item in excluded.selected_candidates])
+        reasons = {item.candidate.repository_relative_path: item.reason for item in excluded.report.excluded_artifacts}
+        self.assertEqual(reasons["60-Reference/Knowledge/archive/parser-manifest.json"], "manual-exclusion")
+
+    def test_duplicate_paths_are_reported_once_and_never_selected_twice(self) -> None:
+        duplicate = replace(observation("70-Platform/src/rip/voice/manager.py", "python_source_file", ".py"), observation_id="obs-duplicate")
+        observations = replace(self.observations, observations=(*self.observations.observations, duplicate))
+        result = discover_artifacts("voice", observations, self.foundation, candidate_limit=3)
+        self.assertEqual([item.repository_relative_path for item in result.selected_candidates].count("70-Platform/src/rip/voice/manager.py"), 1)
+        self.assertTrue(any(item.reason == "duplicate-underlying-artifact" for item in result.report.excluded_artifacts))
+
+    def test_production_repository_queries_are_repeatable_without_runtime_integration(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        with TemporaryDirectory() as temporary:
+            loaded = load_foundation(root / "00-Constitution", state_path=Path(temporary) / "constitutional-memory.json")
+            observed = observe_filesystem(root)
+            for question in (
+                "Why was RIP built?", "What governs organizational authority?", "What happened with parser-manifest.json?",
+                "How does primary evidence work?", "How is voice integrated?", "What have we decided about JD Power?",
+            ):
+                with self.subTest(question=question):
+                    first = discover_artifacts(question, observed, loaded, candidate_limit=3)
+                    second = discover_artifacts(question, observed, loaded, candidate_limit=3)
+                    self.assertEqual(first, second)
+                    self.assertEqual(first.report.discovery_fingerprint, second.report.discovery_fingerprint)
 
 
 if __name__ == "__main__":

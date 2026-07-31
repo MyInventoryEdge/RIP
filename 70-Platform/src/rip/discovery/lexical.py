@@ -23,7 +23,21 @@ _PHRASE = re.compile(r'"([^"]+)"')
 _TOKEN = re.compile(r"\w+", re.UNICODE)
 
 
+class DeterministicArtifactDiscoveryEngine:
+    """Ranks and selects observed artifact metadata without loading evidence content."""
+
+    name = STRATEGY_NAME
+
+    def discover(self, question: str, observations: ObservationSet, foundation: Foundation, *, candidate_limit: int, manual_inclusions: tuple[str, ...] = (), manual_exclusions: tuple[str, ...] = ()) -> ArtifactDiscoveryResult:
+        return _discover_artifacts(question, observations, foundation, candidate_limit=candidate_limit, manual_inclusions=manual_inclusions, manual_exclusions=manual_exclusions)
+
+
 def discover_artifacts(question: str, observations: ObservationSet, foundation: Foundation, *, candidate_limit: int, manual_inclusions: tuple[str, ...] = (), manual_exclusions: tuple[str, ...] = ()) -> ArtifactDiscoveryResult:
+    """Convenience entry point for the default deterministic discovery engine."""
+    return DeterministicArtifactDiscoveryEngine().discover(question, observations, foundation, candidate_limit=candidate_limit, manual_inclusions=manual_inclusions, manual_exclusions=manual_exclusions)
+
+
+def _discover_artifacts(question: str, observations: ObservationSet, foundation: Foundation, *, candidate_limit: int, manual_inclusions: tuple[str, ...], manual_exclusions: tuple[str, ...]) -> ArtifactDiscoveryResult:
     if candidate_limit <= 0:
         raise ValueError("candidate limit must be positive")
     included = _normalize_paths(manual_inclusions)
@@ -32,19 +46,19 @@ def discover_artifacts(question: str, observations: ObservationSet, foundation: 
         raise ValueError("manual inclusion and exclusion paths must not overlap")
     phrases, terms = _query_terms(question)
     candidates = tuple(candidate_from_observation(item, foundation) for item in observations.observations if item.kind not in {"directory", "repository_root", "access_error", "symbolic_link"})
-    eligible = tuple(item for item in candidates if item.compatibility.value != "ineligible")
-    exclusions = tuple(ArtifactDiscoveryExclusion(item, item.eligibility_reason) for item in candidates if item.compatibility.value == "ineligible")
+    eligible, exclusions = _eligible_candidates(candidates, excluded)
     scored = [_score(item, phrases, terms) for item in eligible]
     scored.sort(key=lambda item: (-item.score, item.candidate.repository_relative_path.casefold(), item.candidate.observation_id))
     rankings = tuple(ArtifactDiscoveryRanking(item.candidate, index, item.score, item.reasons) for index, item in enumerate(scored))
-    # Selection is deliberately deferred to Phase 5C; this contract records an empty selection.
-    selected: tuple[ArtifactCandidate, ...] = ()
+    selected = _select(rankings, included, candidate_limit)
     diagnostics = ArtifactDiscoveryDiagnostics(len(candidates), len(eligible), len(exclusions), len(rankings), len(selected), bool(phrases or terms))
     payload = {
         "candidate_limit": candidate_limit,
         "discovery_version": DISCOVERY_VERSION,
         "manual_exclusions": excluded,
         "manual_inclusions": included,
+        "excluded_artifacts": [asdict(item) for item in exclusions],
+        "considered_artifacts": [asdict(item) for item in candidates],
         "question": question,
         "rankings": [asdict(item) for item in rankings],
         "selected_candidates": [asdict(item) for item in selected],
@@ -52,6 +66,43 @@ def discover_artifacts(question: str, observations: ObservationSet, foundation: 
     }
     report = ArtifactDiscoveryReport(DISCOVERY_VERSION, STRATEGY_NAME, question, candidate_limit, included, excluded, candidates, exclusions, rankings, selected, fingerprint(payload), diagnostics)
     return ArtifactDiscoveryResult(selected, report)
+
+
+def _eligible_candidates(candidates: tuple[ArtifactCandidate, ...], manual_exclusions: tuple[str, ...]) -> tuple[tuple[ArtifactCandidate, ...], tuple[ArtifactDiscoveryExclusion, ...]]:
+    exclusions: list[ArtifactDiscoveryExclusion] = []
+    eligible: list[ArtifactCandidate] = []
+    for candidate in candidates:
+        if candidate.repository_relative_path in manual_exclusions:
+            exclusions.append(ArtifactDiscoveryExclusion(candidate, "manual-exclusion"))
+        elif candidate.compatibility.value == "ineligible":
+            exclusions.append(ArtifactDiscoveryExclusion(candidate, candidate.eligibility_reason))
+        else:
+            eligible.append(candidate)
+    unique: dict[str, ArtifactCandidate] = {}
+    for candidate in sorted(eligible, key=lambda item: (item.repository_relative_path.casefold(), item.observation_id)):
+        key = candidate.repository_relative_path.casefold()
+        if key in unique:
+            exclusions.append(ArtifactDiscoveryExclusion(candidate, "duplicate-underlying-artifact"))
+        else:
+            unique[key] = candidate
+    return tuple(unique.values()), tuple(sorted(exclusions, key=lambda item: (item.candidate.repository_relative_path.casefold(), item.candidate.observation_id, item.reason)))
+
+
+def _select(rankings: tuple[ArtifactDiscoveryRanking, ...], manual_inclusions: tuple[str, ...], candidate_limit: int) -> tuple[ArtifactCandidate, ...]:
+    by_path = {item.candidate.repository_relative_path: item.candidate for item in rankings}
+    manual = tuple(by_path[path] for path in manual_inclusions if path in by_path)
+    if len(manual) > candidate_limit:
+        raise ValueError("manual inclusions exceed the explicit candidate limit")
+    selected = list(manual)
+    selected_paths = {item.repository_relative_path for item in selected}
+    for ranking in rankings:
+        if ranking.score == 0 or ranking.candidate.repository_relative_path in selected_paths:
+            continue
+        if len(selected) >= candidate_limit:
+            break
+        selected.append(ranking.candidate)
+        selected_paths.add(ranking.candidate.repository_relative_path)
+    return tuple(selected)
 
 
 class _Scored:
