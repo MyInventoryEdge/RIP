@@ -4,7 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rip.console.app import format_details, format_voice_status, repository_relative_evidence
+from rip.console.app import format_details, format_discovery_details, format_voice_status, repository_relative_evidence
+from rip.reasoning.service import DiscoveryDecision, DiscoveryMode
 from rip.reasoning.models import ReasoningResult
 
 
@@ -53,6 +54,20 @@ class ConsoleFormattingTests(unittest.TestCase):
         self.assertIn("Configured voice: alloy", details)
         self.assertIn("Speech enabled: Yes", details)
         self.assertIn("Transcription model: gpt-4o-mini-transcribe", details)
+
+    def test_discovery_details_exposes_mode_foundation_and_diagnostics(self) -> None:
+        details = format_discovery_details(
+            DiscoveryDecision(
+                DiscoveryMode.AUTOMATIC,
+                True,
+                True,
+                (),
+                reason="Foundation-only",
+            )
+        )
+        self.assertIn("Mode: automatic", details)
+        self.assertIn("Foundation-only: Yes", details)
+        self.assertIn("Reason: Foundation-only", details)
 
 
 if __name__ == "__main__":

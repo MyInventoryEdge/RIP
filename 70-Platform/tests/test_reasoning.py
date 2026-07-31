@@ -14,7 +14,7 @@ from rip.reasoning.models import ReasoningRequest
 from rip.reasoning.openai_provider import OpenAIProvider
 from rip.reasoning.prompt_builder import SYSTEM_INSTRUCTIONS, build_evidence_package, serialize_evidence_package
 from rip.reasoning import service
-from rip.reasoning.service import RetrievalDecision, ask_repository
+from rip.reasoning.service import DiscoveryMode, RetrievalDecision, ask_repository
 
 FIXTURE_FOUNDATION = Path(__file__).resolve().parents[2] / "00-Constitution"
 
@@ -86,6 +86,41 @@ class ReasoningTests(unittest.TestCase):
             ask_repository("Read it", root=root, provider=provider, primary_paths=["evidence.txt"])
             package = json.loads(provider.request.evidence_json.split("\n\n", 1)[1])
             self.assertEqual(package["primary_evidence"]["artifacts"][0]["content"], "exact primary evidence")
+
+    def test_automatic_discovery_and_foundation_only_decisions_are_reported_without_provider_changes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            voice = root / "70-Platform" / "src" / "rip" / "voice" / "manager.py"; voice.parent.mkdir(parents=True); voice.write_text("voice evidence", encoding="utf-8")
+            provider = FakeProvider(); decisions = []
+            ask_repository("voice", root=root, provider=provider, discovery_callback=decisions.append)
+            self.assertEqual(decisions[0].mode, DiscoveryMode.AUTOMATIC)
+            self.assertEqual(decisions[0].resolved_paths, ("70-Platform/src/rip/voice/manager.py",))
+            package = json.loads(provider.request.evidence_json.split("\n\n", 1)[1])
+            self.assertEqual(package["primary_evidence"]["artifacts"][0]["content"], "voice evidence")
+            decisions.clear(); ask_repository("unmatched", root=root, provider=FakeProvider(), discovery_callback=decisions.append)
+            self.assertTrue(decisions[0].foundation_only)
+            self.assertEqual(decisions[0].resolved_paths, ())
+            first = decisions[0]
+            decisions.clear(); ask_repository("unmatched", root=root, provider=FakeProvider(), discovery_callback=decisions.append)
+            self.assertEqual(decisions[0], first)
+
+    def test_constraints_use_only_legacy_and_automatic_retrieval_compose_deterministically(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._repository(root)
+            artifact = root / "canonical-session.json"; artifact.write_text(self._canonical_session(), encoding="utf-8")
+            provider = FakeProvider(); decisions = []
+            ask_repository("needle", root=root, provider=provider, discovery_includes=["canonical-session.json"], discovery_callback=decisions.append)
+            self.assertEqual(decisions[0].mode, DiscoveryMode.CONSTRAINED)
+            package = json.loads(provider.request.evidence_json.split("\n\n", 1)[1])
+            self.assertTrue(package["primary_evidence"]["artifacts"][0]["chunked"])
+            decisions.clear(); ask_repository("needle", root=root, provider=FakeProvider(), primary_paths=["canonical-session.json"], discovery_callback=decisions.append)
+            self.assertEqual(decisions[0].mode, DiscoveryMode.LEGACY)
+            decisions.clear(); ask_repository("needle", root=root, provider=FakeProvider(), discovery_includes=["canonical-session.json"], use_only_selected_artifacts=True, discovery_callback=decisions.append)
+            self.assertEqual(decisions[0].mode, DiscoveryMode.USE_ONLY)
+            with self.assertRaisesRegex(ValueError, "requires at least one"):
+                ask_repository("needle", root=root, provider=FakeProvider(), use_only_selected_artifacts=True)
+            decisions.clear(); ask_repository("session", root=root, provider=FakeProvider(), discovery_excludes=["canonical-session.json"], discovery_callback=decisions.append)
+            self.assertTrue(decisions[0].foundation_only)
 
     @staticmethod
     def _canonical_session(message_count: int = 100, markdown: str = "needle") -> str:

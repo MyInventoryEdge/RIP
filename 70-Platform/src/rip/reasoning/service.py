@@ -3,12 +3,14 @@ from __future__ import annotations
 import os
 import json
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Callable
 
 from ..foundation import load_foundation
 from ..observation import find_repository_root, observe_filesystem
 from ..retrieval import CoverageStatus, DeterministicLexicalRetrievalEngine
+from ..discovery import ArtifactDiscoveryReport, discover_artifacts
 from .models import ReasoningRequest, ReasoningResult
 from .openai_provider import OpenAIProvider
 from .prompt_builder import SYSTEM_INSTRUCTIONS, build_evidence_package, build_user_input, serialize_evidence_package
@@ -20,6 +22,7 @@ DEFAULT_MODEL = "gpt-5.5"
 # output and reasoning; estimate conservatively at three UTF-8 bytes per token.
 SAFE_INPUT_TOKEN_BUDGET = 800_000
 CONSERVATIVE_BYTES_PER_TOKEN = 3
+DEFAULT_DISCOVERY_CANDIDATE_LIMIT = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,6 +39,23 @@ class RetrievalDecision:
     retrieval_fingerprint: str | None
 
 
+class DiscoveryMode(str, Enum):
+    AUTOMATIC = "automatic"
+    CONSTRAINED = "automatic-with-constraints"
+    USE_ONLY = "use-only-selected-artifacts"
+    LEGACY = "legacy-primary-paths"
+
+
+@dataclass(frozen=True, slots=True)
+class DiscoveryDecision:
+    mode: DiscoveryMode
+    discovery_performed: bool
+    foundation_only: bool
+    resolved_paths: tuple[str, ...]
+    report: ArtifactDiscoveryReport | None = None
+    reason: str | None = None
+
+
 def ask_repository(
     question: str,
     *,
@@ -44,6 +64,11 @@ def ask_repository(
     provider: ReasoningProvider | None = None,
     status_callback: Callable[[str], None] | None = None,
     primary_paths: list[str] | None = None,
+    discovery_includes: list[str] | None = None,
+    discovery_excludes: list[str] | None = None,
+    use_only_selected_artifacts: bool = False,
+    discovery_candidate_limit: int = DEFAULT_DISCOVERY_CANDIDATE_LIMIT,
+    discovery_callback: Callable[[DiscoveryDecision], None] | None = None,
 ) -> ReasoningResult:
     cleaned = question.strip()
     if not cleaned:
@@ -57,8 +82,11 @@ def ask_repository(
     report("Observing repository...")
     observations = observe_filesystem(repository_root)
     report("Building evidence package...")
-    primary = load_primary_evidence(repository_root, observations, primary_paths or [])
-    if primary_paths and not primary:
+    paths, discovery = _resolve_evidence_paths(cleaned, foundation, observations, primary_paths, discovery_includes, discovery_excludes, use_only_selected_artifacts, discovery_candidate_limit)
+    if discovery_callback:
+        discovery_callback(discovery)
+    primary = load_primary_evidence(repository_root, observations, list(paths))
+    if paths and not primary:
         raise ValueError("Primary-evidence integration error: requested artifacts were not loaded.")
     primary, _decision = _prepare_primary_evidence(foundation, observations, cleaned, primary)
     package = build_evidence_package(foundation, observations, cleaned, primary)
@@ -69,6 +97,37 @@ def ask_repository(
     result = active_provider.ask(request)
     report("Formatting response...")
     return result
+
+
+def _resolve_evidence_paths(question: str, foundation, observations, primary_paths: list[str] | None, includes: list[str] | None, excludes: list[str] | None, use_only: bool, candidate_limit: int) -> tuple[tuple[str, ...], DiscoveryDecision]:
+    if candidate_limit <= 0:
+        raise ValueError("discovery candidate limit must be positive")
+    if primary_paths is not None:
+        if use_only or includes or excludes:
+            raise ValueError("legacy primary_paths cannot be combined with discovery constraints")
+        if not primary_paths:
+            raise ValueError("Use Only Selected Artifacts requires at least one artifact.")
+        paths = tuple(dict.fromkeys(primary_paths))
+        return paths, DiscoveryDecision(DiscoveryMode.LEGACY, False, False, paths)
+    included = tuple(includes or ())
+    excluded = tuple(excludes or ())
+    if use_only:
+        paths = tuple(path for path in dict.fromkeys(included) if path not in excluded)
+        if not paths:
+            raise ValueError("Use Only Selected Artifacts requires at least one artifact after exclusions.")
+        return paths, DiscoveryDecision(DiscoveryMode.USE_ONLY, False, False, paths)
+    result = discover_artifacts(question, observations, foundation, candidate_limit=candidate_limit, manual_inclusions=included, manual_exclusions=excluded)
+    paths = tuple(item.repository_relative_path for item in result.selected_candidates)
+    mode = DiscoveryMode.CONSTRAINED if included or excluded else DiscoveryMode.AUTOMATIC
+    foundation_only = not paths
+    return paths, DiscoveryDecision(
+        mode,
+        True,
+        foundation_only,
+        paths,
+        result.report,
+        "Foundation-only" if foundation_only else None,
+    )
 
 
 def _build_request(question: str, model: str | None, package: dict[str, object]) -> ReasoningRequest:

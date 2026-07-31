@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from ..observation import find_repository_root
 from ..reasoning import ReasoningResult, ask_repository
+from ..reasoning.service import DiscoveryDecision
 from ..voice import VoiceManager, VoiceState
 
 
@@ -62,6 +63,18 @@ def format_voice_status(status: dict[str, object]) -> str:
     )
 
 
+def format_discovery_details(decision: DiscoveryDecision) -> str:
+    lines = [f"Mode: {decision.mode.value}", f"Foundation-only: {'Yes' if decision.foundation_only else 'No'}", "Selected artifacts: " + (", ".join(decision.resolved_paths) or "None")]
+    if decision.reason:
+        lines.append(f"Reason: {decision.reason}")
+    if decision.report:
+        lines.extend((f"Fingerprint: {decision.report.discovery_fingerprint}", f"Candidates: {decision.report.diagnostics.artifacts_ranked}", f"Excluded: {decision.report.diagnostics.artifacts_excluded}"))
+        for ranking in decision.report.rankings:
+            reasons = ", ".join(f"{item.signal} +{item.contribution}" for item in ranking.reason_vector) or "no lexical matches"
+            lines.append(f"{ranking.rank}. {ranking.candidate.repository_relative_path}: {ranking.score} ({reasons})")
+    return "\n".join(lines)
+
+
 class RipConsole(tk.Tk):
     POLL_INTERVAL_MS = 100
 
@@ -80,6 +93,10 @@ class RipConsole(tk.Tk):
         self._voice.set_state_callback(lambda state: self._events.put(("voice_state", state)))
         self._muted = False
         self._primary_evidence: list[str] = []
+        self._excluded_evidence: list[str] = []
+        self._use_only_selected = tk.BooleanVar(value=False)
+        self._candidate_limit = tk.IntVar(value=3)
+        self._discovery_details = ""
 
         self._build_ui()
         self.after(self.POLL_INTERVAL_MS, self._poll_events)
@@ -140,14 +157,26 @@ class RipConsole(tk.Tk):
         self.mute_button = ttk.Button(controls, text="Mute", command=self.toggle_mute)
         self.mute_button.grid(row=1, column=5, sticky="w", padx=(8, 0), pady=(8, 0))
 
-        evidence = ttk.LabelFrame(controls, text="Primary Evidence", padding=(6, 4))
+        evidence = ttk.LabelFrame(controls, text="Primary Evidence — Automatic Discovery", padding=(6, 4))
         evidence.grid(row=2, column=0, columnspan=7, sticky="ew", pady=(8, 0))
         evidence.columnconfigure(0, weight=1)
         self.evidence_list = tk.Listbox(evidence, height=3)
         self.evidence_list.grid(row=0, column=0, rowspan=2, sticky="ew")
-        ttk.Button(evidence, text="Add Files", command=self.add_primary_evidence).grid(row=0, column=1, padx=(8, 0))
+        ttk.Button(evidence, text="Include Artifacts", command=self.add_primary_evidence).grid(row=0, column=1, padx=(8, 0))
         ttk.Button(evidence, text="Remove", command=self.remove_primary_evidence).grid(row=1, column=1, padx=(8, 0))
         ttk.Button(evidence, text="Clear", command=self.clear_primary_evidence).grid(row=0, column=2, rowspan=2, padx=(8, 0))
+        self.use_only_check = ttk.Checkbutton(evidence, text="Use Only Selected Artifacts", variable=self._use_only_selected)
+        self.use_only_check.grid(row=2, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(evidence, text="Candidate Limit:").grid(row=2, column=1, sticky="e", pady=(6, 0))
+        ttk.Spinbox(evidence, from_=1, to=20, textvariable=self._candidate_limit, width=4).grid(row=2, column=2, sticky="w", pady=(6, 0))
+        ttk.Button(evidence, text="Exclude Artifacts", command=self.add_excluded_evidence).grid(row=3, column=1, padx=(8, 0), pady=(6, 0))
+        self.excluded_list = tk.Listbox(evidence, height=2)
+        self.excluded_list.grid(row=3, column=0, rowspan=2, sticky="ew", pady=(6, 0))
+        ttk.Button(evidence, text="Remove Exclusion", command=self.remove_excluded_evidence).grid(row=4, column=1, padx=(8, 0))
+        self.discovery_list = tk.Listbox(evidence, height=3)
+        self.discovery_list.grid(row=5, column=0, sticky="ew", pady=(6, 0))
+        self.discovery_button = ttk.Button(evidence, text="Discovery Details", command=self.show_discovery_details, state="disabled")
+        self.discovery_button.grid(row=5, column=1, padx=(8, 0))
 
         self.details_frame = ttk.LabelFrame(self, text="Reasoning Details", padding=(12, 8))
         self.details_text = tk.Text(self.details_frame, height=7, wrap="word", state="disabled", font=("Consolas", 9))
@@ -175,6 +204,15 @@ class RipConsole(tk.Tk):
             self._refresh_primary_evidence()
         except ValueError as exc: messagebox.showerror("Primary Evidence", str(exc))
 
+    def add_excluded_evidence(self) -> None:
+        root = find_repository_root()
+        try:
+            for path in filedialog.askopenfilenames(initialdir=root, title="Exclude discovery artifacts"):
+                relative = repository_relative_evidence(path, root)
+                if relative not in self._excluded_evidence: self._excluded_evidence.append(relative)
+            self._refresh_excluded_evidence()
+        except ValueError as exc: messagebox.showerror("Primary Evidence", str(exc))
+
     def remove_primary_evidence(self) -> None:
         for index in reversed(self.evidence_list.curselection()): self._primary_evidence.pop(index)
         self._refresh_primary_evidence()
@@ -182,9 +220,17 @@ class RipConsole(tk.Tk):
     def clear_primary_evidence(self) -> None:
         self._primary_evidence.clear(); self._refresh_primary_evidence()
 
+    def remove_excluded_evidence(self) -> None:
+        for index in reversed(self.excluded_list.curselection()): self._excluded_evidence.pop(index)
+        self._refresh_excluded_evidence()
+
     def _refresh_primary_evidence(self) -> None:
         self.evidence_list.delete(0, tk.END)
         for path in self._primary_evidence: self.evidence_list.insert(tk.END, path)
+
+    def _refresh_excluded_evidence(self) -> None:
+        self.excluded_list.delete(0, tk.END)
+        for path in self._excluded_evidence: self.excluded_list.insert(tk.END, path)
 
     def _on_talk_shortcut(self, _event: tk.Event) -> str:
         self.talk()
@@ -202,7 +248,7 @@ class RipConsole(tk.Tk):
         self._set_busy(True)
         self._voice.transition(VoiceState.REASONING)
 
-        worker = threading.Thread(target=self._run_reasoning, args=(question, tuple(self._primary_evidence)), daemon=True)
+        worker = threading.Thread(target=self._run_reasoning, args=(question, tuple(self._primary_evidence), tuple(self._excluded_evidence), self._use_only_selected.get(), self._candidate_limit.get()), daemon=True)
         worker.start()
 
     def talk(self) -> None:
@@ -225,12 +271,13 @@ class RipConsole(tk.Tk):
         finally:
             Path(temporary_path).unlink(missing_ok=True)
 
-    def _run_reasoning(self, question: str, primary_paths: tuple[str, ...] = ()) -> None:
+    def _run_reasoning(self, question: str, includes: tuple[str, ...] = (), excludes: tuple[str, ...] = (), use_only: bool = False, candidate_limit: int = 3) -> None:
         started = time.perf_counter()
         try:
             result = ask_repository(
                 question,
-                primary_paths=list(primary_paths),
+                discovery_includes=list(includes), discovery_excludes=list(excludes), use_only_selected_artifacts=use_only, discovery_candidate_limit=candidate_limit,
+                discovery_callback=lambda decision: self._events.put(("discovery", decision)),
                 status_callback=lambda status: self._events.put(("status", status)),
             )
             elapsed = time.perf_counter() - started
@@ -251,6 +298,8 @@ class RipConsole(tk.Tk):
                     self._handle_result(payload)
                 elif event_type == "error":
                     self._handle_error(str(payload))
+                elif event_type == "discovery":
+                    self._handle_discovery(payload)
                 elif event_type == "voice_input":
                     self._set_busy(False)
                     if payload:
@@ -299,6 +348,15 @@ class RipConsole(tk.Tk):
         self._set_busy(False)
         self._set_status("Error")
         self._voice.reset()
+
+    def _handle_discovery(self, decision: object) -> None:
+        if not isinstance(decision, DiscoveryDecision): return
+        self._discovery_details = format_discovery_details(decision)
+        self.discovery_list.delete(0, tk.END)
+        label = "Automatic Discovery BYPASSED" if not decision.discovery_performed else ("Foundation-only" if decision.foundation_only else "Discovered candidates")
+        self.discovery_list.insert(tk.END, label)
+        for path in decision.resolved_paths: self.discovery_list.insert(tk.END, path)
+        self.discovery_button.configure(state="normal")
 
     def _append_message(self, speaker: str, body: str, *, tag: str = "answer") -> None:
         self.history.configure(state="normal")
@@ -386,6 +444,11 @@ class RipConsole(tk.Tk):
             self.details_frame.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 8))
             self.details_button.configure(text="Hide Details")
             self._details_visible = True
+
+    def show_discovery_details(self) -> None:
+        if not self._discovery_details: return
+        window = tk.Toplevel(self); window.title("Discovery Details"); window.transient(self)
+        text = tk.Text(window, height=18, width=100, wrap="word"); text.insert("1.0", self._discovery_details); text.configure(state="disabled"); text.pack(fill="both", expand=True, padx=12, pady=12)
 
 
 def main() -> int:

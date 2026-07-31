@@ -166,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(result.message); return 0 if result.success else 1
             print("Voice configuration saved."); return 0
         if args.command == "ask":
-            result = ask_repository(args.question, root=args.root, model=args.model, primary_paths=args.primary_evidence)
+            result = ask_repository(args.question, root=args.root, model=args.model, primary_paths=args.primary_evidence or None)
             print("RIP Grounded Interpretation\n")
             print(result.answer)
             if result.unknown_observation_ids:
