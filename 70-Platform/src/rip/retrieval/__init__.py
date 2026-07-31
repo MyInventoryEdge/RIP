@@ -8,6 +8,7 @@ from .models import (
     CoverageSummary,
     EvidenceChunk,
     MessageRange,
+    RetrievalDiagnostics,
     RetrievalReport,
     RetrievalResult,
     SourceRange,
@@ -15,5 +16,6 @@ from .models import (
 )
 from .registry import ChunkerRegistry
 from .canonical_session import CanonicalSessionChunker, OversizedLogicalUnitError, reassemble_messages
+from .lexical import DeterministicLexicalRetrievalEngine
 
-__all__ = ["ArtifactDescriptor", "CanonicalSessionChunker", "ChunkCatalog", "ChunkerRegistry", "ChunkReference", "CoverageStatus", "CoverageSummary", "EvidenceChunk", "MessageRange", "OversizedLogicalUnitError", "RetrievalReport", "RetrievalResult", "SourceRange", "VersionMetadata", "reassemble_messages"]
+__all__ = ["ArtifactDescriptor", "CanonicalSessionChunker", "ChunkCatalog", "ChunkerRegistry", "ChunkReference", "CoverageStatus", "CoverageSummary", "DeterministicLexicalRetrievalEngine", "EvidenceChunk", "MessageRange", "OversizedLogicalUnitError", "RetrievalDiagnostics", "RetrievalReport", "RetrievalResult", "SourceRange", "VersionMetadata", "reassemble_messages"]

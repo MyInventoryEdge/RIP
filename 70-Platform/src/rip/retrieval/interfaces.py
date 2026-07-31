@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Protocol
+from typing import Literal, Protocol
 from .models import ArtifactDescriptor, ChunkCatalog, RetrievalResult
 
 class ArtifactChunker(Protocol):
@@ -9,6 +9,7 @@ class ArtifactChunker(Protocol):
 
 class RetrievalStrategy(Protocol):
     name: str
+    def retrieve(self, query: str, catalog: ChunkCatalog, *, token_budget: int, max_selected_chunks: int | None = None, surrounding_context: Literal["none"] = "none") -> RetrievalResult: ...
 
 class EvidenceRetrievalEngine(Protocol):
-    def retrieve(self, *args, **kwargs) -> RetrievalResult: ...
+    def retrieve(self, query: str, catalog: ChunkCatalog, *, token_budget: int, max_selected_chunks: int | None = None, surrounding_context: Literal["none"] = "none") -> RetrievalResult: ...

@@ -11,6 +11,7 @@ from rip.retrieval.models import (
     EvidenceChunk,
     MessageRange,
     RankingEntry,
+    RetrievalDiagnostics,
     RetrievalReport,
     RetrievalResult,
     SourceRange,
@@ -50,7 +51,11 @@ def coverage(**changes: object) -> CoverageSummary:
 
 
 def report(selected_chunks=(), excluded_chunks=(), rankings=()) -> RetrievalReport:
-    return RetrievalReport("1.0", "lexical", "question", (coverage(),), selected_chunks, excluded_chunks, rankings, 100, 25)
+    return RetrievalReport(
+        "1.0", "lexical", "question", (coverage(),), selected_chunks, excluded_chunks, rankings,
+        100, 25, "d" * 64,
+        RetrievalDiagnostics(len(selected_chunks) + len(excluded_chunks), len(rankings), len(selected_chunks), True),
+    )
 
 
 class RetrievalModelTests(unittest.TestCase):
@@ -106,3 +111,10 @@ class RetrievalModelTests(unittest.TestCase):
         with self.assertRaises(ValueError): report((), (), (RankingEntry(reference, 1, 1, "x"),))
         foreign = ChunkReference("other.json", ARTIFACT_HASH, CHUNK_HASH, "foreign", 0)
         with self.assertRaises(ValueError): report((foreign,), (), (RankingEntry(foreign, 0, 1, "x"),))
+
+    def test_report_validates_deterministic_diagnostics_and_fingerprint(self) -> None:
+        with self.assertRaises(ValueError): RetrievalDiagnostics(1, 2, 0, True)
+        with self.assertRaises(ValueError): RetrievalReport(
+            "1.0", "lexical", "question", (coverage(),), (), (), (), 1, 0, "bad",
+            RetrievalDiagnostics(0, 0, 0, False),
+        )

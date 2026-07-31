@@ -280,6 +280,22 @@ class RankingEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class RetrievalDiagnostics:
+    """Deterministic engineering counts; these are not confidence measurements."""
+
+    chunks_considered: int
+    chunks_ranked: int
+    chunks_selected: int
+    searchable_terms_present: bool
+
+    def __post_init__(self) -> None:
+        if min(self.chunks_considered, self.chunks_ranked, self.chunks_selected) < 0:
+            raise ValueError("retrieval diagnostic counts must be nonnegative")
+        if self.chunks_ranked > self.chunks_considered or self.chunks_selected > self.chunks_ranked:
+            raise ValueError("retrieval diagnostic counts are inconsistent")
+
+
+@dataclass(frozen=True, slots=True)
 class RetrievalReport:
     """Deterministic audit record for a future retrieval operation."""
 
@@ -292,12 +308,15 @@ class RetrievalReport:
     rankings: tuple[RankingEntry, ...]
     token_budget: int
     estimated_token_usage: int
+    retrieval_fingerprint: str
+    diagnostics: RetrievalDiagnostics
 
     def __post_init__(self) -> None:
         if not self.retrieval_version or not self.strategy:
             raise ValueError("retrieval version and strategy are required")
         if self.token_budget < 0 or self.estimated_token_usage < 0:
             raise ValueError("retrieval token counts must be nonnegative")
+        _validate_sha256(self.retrieval_fingerprint)
         selected = {self._reference_identity(reference) for reference in self.selected_chunks}
         excluded = {self._reference_identity(reference) for reference in self.excluded_chunks}
         if selected & excluded:
@@ -315,6 +334,10 @@ class RetrievalReport:
             raise ValueError("coverage summaries must be unique per artifact")
         if any((ref.repository_relative_path, ref.artifact_sha256) not in coverage_ids for ref in (*self.selected_chunks, *self.excluded_chunks)):
             raise ValueError("chunk references must have matching coverage")
+        if self.diagnostics.chunks_considered != len(self.selected_chunks) + len(self.excluded_chunks):
+            raise ValueError("retrieval diagnostics must account for every considered chunk")
+        if self.diagnostics.chunks_ranked != len(self.rankings) or self.diagnostics.chunks_selected != len(self.selected_chunks):
+            raise ValueError("retrieval diagnostics must match report contents")
 
     @staticmethod
     def _reference_identity(reference: ChunkReference) -> tuple[str, str, str, str, int]:
