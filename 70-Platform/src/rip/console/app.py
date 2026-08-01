@@ -10,6 +10,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from ..onboarding import (
+    ObservationRun,
+    ReasoningCapability,
+    UnderstandingState,
+    create_organization_workspace,
+    observe_organization,
+    recommend_reasoning_capability,
+    restart_onboarding_run,
+    validate_reasoning_capability,
+)
 from ..observation import find_repository_root
 from ..reasoning import ReasoningResult, ask_repository
 from ..reasoning.service import DiscoveryDecision
@@ -75,6 +85,184 @@ def format_discovery_details(decision: DiscoveryDecision) -> str:
     return "\n".join(lines)
 
 
+def format_understanding_meter(result: ObservationRun) -> str:
+    labels = {
+        UnderstandingState.OBSERVED: "Observed",
+        UnderstandingState.SIGNALS_DETECTED: "Signals Detected",
+        UnderstandingState.UNKNOWN: "Unknown",
+        UnderstandingState.REQUIRES_CONFIRMATION: "Requires Confirmation",
+    }
+    return "\n".join(f"{dimension.name}: {labels[dimension.state]} — {dimension.explanation}" for dimension in result.understanding_meter.dimensions)
+
+
+def format_observation_summary(result: ObservationRun) -> str:
+    groups = (
+        ("Observed", result.summary.observed),
+        ("Evidence Signals Detected", result.summary.discovered),
+        ("Unknown", result.summary.unknown),
+        ("Requires Confirmation", result.summary.requires_confirmation),
+    )
+    lines: list[str] = []
+    for heading, items in groups:
+        lines.append(heading)
+        if not items:
+            lines.append("- None")
+        for item in items:
+            evidence = ", ".join(item.evidence_paths) or "observation scope"
+            lines.append(f"- {item.statement} [{evidence}]")
+    return "\n".join(lines)
+
+
+class OnboardingWindow(tk.Toplevel):
+    """Phase 6A organization onboarding: explicit, read-only observation only."""
+
+    POLL_INTERVAL_MS = 100
+
+    def __init__(self, parent: tk.Tk) -> None:
+        super().__init__(parent)
+        self.title("RIP Organization Onboarding")
+        self.geometry("920x720")
+        self.minsize(720, 560)
+        self.transient(parent)
+        self._events: queue.Queue[tuple[str, object]] = queue.Queue()
+        self._busy = False
+        self._capability = recommend_reasoning_capability()
+        self._context = None
+        self.organization_id = tk.StringVar()
+        self.organization_name = tk.StringVar()
+        self.repository_path = tk.StringVar()
+        self.workspace_path = tk.StringVar(value=str(Path.home() / ".rip-onboarding"))
+        self.provider_id = tk.StringVar(value=self._capability.provider_id)
+        self.model = tk.StringVar(value=self._capability.model)
+        self.readiness = tk.StringVar(value="Select a capability to check local configuration and declared context support. Live provider connectivity is not verified in Phase 6A.")
+        self.activity = tk.StringVar(value="Ready to establish an isolated, read-only onboarding run.")
+        self.next_stage = tk.StringVar(value="Next stage: observe approved repository evidence.")
+        self._build_ui()
+        self.after(self.POLL_INTERVAL_MS, self._poll_events)
+
+    def _build_ui(self) -> None:
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(4, weight=1)
+        banner = ttk.Label(self, text="Customer Sources — Read Only", anchor="center", padding=10, font=("Segoe UI", 11, "bold"))
+        banner.grid(row=0, column=0, sticky="ew")
+        ttk.Label(self, text="Onboarding records are written only to the isolated RIP workspace. Customer repositories and approved external sources remain read-only; Phase 6A cannot promote governance, activate an organization, or take operational customer action.", wraplength=850, padding=(14, 0, 14, 10)).grid(row=1, column=0, sticky="w")
+
+        setup = ttk.LabelFrame(self, text="Organization and Reasoning Capability", padding=10)
+        setup.grid(row=2, column=0, sticky="ew", padx=12)
+        setup.columnconfigure(1, weight=1)
+        self._field(setup, "Organization ID", self.organization_id, 0)
+        self._field(setup, "Organization name", self.organization_name, 1)
+        self._field(setup, "Repository", self.repository_path, 2, browse=self._choose_repository)
+        self._field(setup, "RIP workspace", self.workspace_path, 3, browse=self._choose_workspace)
+        self._field(setup, "Provider override", self.provider_id, 4)
+        self._field(setup, "Model override", self.model, 5)
+        self.validate_button = ttk.Button(setup, text="Validate Capability", command=self.validate_capability)
+        self.validate_button.grid(row=6, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(setup, textvariable=self.readiness, wraplength=650).grid(row=6, column=1, columnspan=2, sticky="w", padx=(8, 0), pady=(8, 0))
+
+        progress = ttk.LabelFrame(self, text="Current Activity", padding=10)
+        progress.grid(row=3, column=0, sticky="ew", padx=12, pady=(8, 0))
+        ttk.Label(progress, textvariable=self.activity, wraplength=850).pack(anchor="w")
+        ttk.Label(progress, textvariable=self.next_stage, wraplength=850).pack(anchor="w", pady=(4, 0))
+
+        results = ttk.PanedWindow(self, orient="horizontal")
+        results.grid(row=4, column=0, sticky="nsew", padx=12, pady=(8, 0))
+        feed_frame = ttk.LabelFrame(results, text="Discovery Feed", padding=6)
+        meter_frame = ttk.LabelFrame(results, text="Understanding Meter and Observation Summary", padding=6)
+        results.add(feed_frame, weight=1); results.add(meter_frame, weight=2)
+        self.feed = tk.Listbox(feed_frame, height=16)
+        self.feed.pack(fill="both", expand=True)
+        self.summary = tk.Text(meter_frame, wrap="word", state="disabled", font=("Segoe UI", 9))
+        self.summary.pack(fill="both", expand=True)
+
+        controls = ttk.Frame(self, padding=12)
+        controls.grid(row=5, column=0, sticky="ew")
+        self.observe_button = ttk.Button(controls, text="Begin Read-Only Observation", command=self.begin_observation)
+        self.observe_button.pack(side="left")
+        ttk.Button(controls, text="Restart Onboarding Run", command=self.begin_observation).pack(side="left", padx=(8, 0))
+        ttk.Button(controls, text="Close", command=self.destroy).pack(side="right")
+
+    def _field(self, parent: ttk.LabelFrame, label: str, variable: tk.StringVar, row: int, browse=None) -> None:
+        ttk.Label(parent, text=label + ":").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Entry(parent, textvariable=variable).grid(row=row, column=1, sticky="ew", pady=2)
+        if browse:
+            ttk.Button(parent, text="Browse", command=browse).grid(row=row, column=2, padx=(8, 0), pady=2)
+
+    def _choose_repository(self) -> None:
+        selected = filedialog.askdirectory(title="Select approved repository to observe")
+        if selected: self.repository_path.set(selected)
+
+    def _choose_workspace(self) -> None:
+        selected = filedialog.askdirectory(title="Select RIP-controlled onboarding workspace")
+        if selected: self.workspace_path.set(selected)
+
+    def _selected_capability(self) -> ReasoningCapability:
+        return ReasoningCapability(self.provider_id.get().strip(), self.model.get().strip(), self.provider_id.get().strip() or "Provider", True, True, False)
+
+    def validate_capability(self) -> bool:
+        try:
+            validation = validate_reasoning_capability(self._selected_capability())
+        except ValueError as exc:
+            self.readiness.set(str(exc)); return False
+        self._capability = validation.capability
+        self.readiness.set(" ".join(validation.reasons))
+        return validation.locally_eligible_for_observation
+
+    def begin_observation(self) -> None:
+        if self._busy:
+            return
+        if not all((self.organization_id.get().strip(), self.organization_name.get().strip(), self.repository_path.get().strip(), self.workspace_path.get().strip())):
+            messagebox.showerror("Organization Onboarding", "Organization identity, repository, and workspace are required.")
+            return
+        if not self.validate_capability():
+            messagebox.showerror("Reasoning Capability", self.readiness.get())
+            return
+        try:
+            workspace = create_organization_workspace(self.workspace_path.get(), organization_id=self.organization_id.get().strip(), display_name=self.organization_name.get().strip(), repository_path=self.repository_path.get())
+            self._context = restart_onboarding_run(workspace, repository_path=self.repository_path.get(), reasoning_capability=self._capability)
+        except Exception as exc:
+            messagebox.showerror("Organization Onboarding", str(exc)); return
+        self._busy = True; self.observe_button.configure(state="disabled")
+        self.feed.delete(0, tk.END); self._replace_summary("")
+        self.activity.set("Observing approved repository evidence. Customer sources are read-only; onboarding records are written only to the isolated RIP workspace.")
+        self.next_stage.set("Next stage: organize observed evidence into an onboarding summary.")
+        threading.Thread(target=self._observe_worker, args=(self._context,), daemon=True).start()
+
+    def _observe_worker(self, context) -> None:
+        try:
+            result = observe_organization(context, progress_callback=lambda event: self._events.put(("feed", event)))
+            self._events.put(("observed", result))
+        except Exception as exc:
+            self._events.put(("error", str(exc)))
+
+    def _poll_events(self) -> None:
+        try:
+            while True:
+                event_type, payload = self._events.get_nowait()
+                if event_type == "feed":
+                    event = payload
+                    self.feed.insert(tk.END, f"{event.sequence + 1}. {event.message}")
+                    self.activity.set(event.message)
+                elif event_type == "observed" and isinstance(payload, ObservationRun):
+                    self._replace_summary(format_understanding_meter(payload) + "\n\n" + format_observation_summary(payload))
+                    self.activity.set("Read-only observation complete. Every summary item is linked to observed repository evidence; no customer-source modifications occurred.")
+                    self.next_stage.set("Next stage: guided interview and governance drafting are intentionally unavailable until Phase 6B.")
+                    self._finish()
+                elif event_type == "error":
+                    self.activity.set("Observation stopped: " + str(payload)); self.next_stage.set("Next stage: correct the displayed issue or start a fresh onboarding run.")
+                    self._finish()
+        except queue.Empty:
+            pass
+        finally:
+            if self.winfo_exists(): self.after(self.POLL_INTERVAL_MS, self._poll_events)
+
+    def _replace_summary(self, value: str) -> None:
+        self.summary.configure(state="normal"); self.summary.delete("1.0", "end"); self.summary.insert("1.0", value); self.summary.configure(state="disabled")
+
+    def _finish(self) -> None:
+        self._busy = False; self.observe_button.configure(state="normal")
+
+
 class RipConsole(tk.Tk):
     POLL_INTERVAL_MS = 100
 
@@ -111,6 +299,7 @@ class RipConsole(tk.Tk):
         ttk.Label(header, text="RIP Reasoning Console", font=("Segoe UI", 15, "bold")).grid(row=0, column=0, sticky="w")
         self.status_label = ttk.Label(header, text="Idle")
         self.status_label.grid(row=0, column=1, sticky="e")
+        ttk.Button(header, text="Organization Onboarding", command=self.open_onboarding).grid(row=1, column=1, sticky="e", pady=(4, 0))
 
         history_frame = ttk.Frame(self, padding=(12, 0, 12, 8))
         history_frame.grid(row=1, column=0, sticky="nsew")
@@ -449,6 +638,9 @@ class RipConsole(tk.Tk):
         if not self._discovery_details: return
         window = tk.Toplevel(self); window.title("Discovery Details"); window.transient(self)
         text = tk.Text(window, height=18, width=100, wrap="word"); text.insert("1.0", self._discovery_details); text.configure(state="disabled"); text.pack(fill="both", expand=True, padx=12, pady=12)
+
+    def open_onboarding(self) -> None:
+        OnboardingWindow(self)
 
 
 def main() -> int:

@@ -4,7 +4,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rip.console.app import format_details, format_discovery_details, format_voice_status, repository_relative_evidence
+from rip.console.app import format_details, format_discovery_details, format_observation_summary, format_understanding_meter, format_voice_status, repository_relative_evidence
+from rip.onboarding import (
+    ObservationMode,
+    ObservationRun,
+    ObservationSummary,
+    ObservationSummaryItem,
+    OnboardingRunState,
+    OrganizationContext,
+    ReasoningCapability,
+    UnderstandingDimension,
+    UnderstandingMeter,
+    UnderstandingState,
+)
 from rip.reasoning.service import DiscoveryDecision, DiscoveryMode
 from rip.reasoning.models import ReasoningResult
 
@@ -68,6 +80,25 @@ class ConsoleFormattingTests(unittest.TestCase):
         self.assertIn("Mode: automatic", details)
         self.assertIn("Foundation-only: Yes", details)
         self.assertIn("Reason: Foundation-only", details)
+
+    def test_onboarding_formats_observation_summary_and_understanding_without_time_estimates(self) -> None:
+        capability = ReasoningCapability("test", "model", "Test", True, True, True)
+        context = OrganizationContext("acme-org", "run-001", "C:/repo", "C:/workspace", ObservationMode.READ_ONLY, capability)
+        item = ObservationSummaryItem(UnderstandingState.OBSERVED, "Repository observed.", ("obs-123",), (".",))
+        meter = UnderstandingMeter((UnderstandingDimension("Repositories", UnderstandingState.OBSERVED, ("obs-123",), (".",), "Repository scope established."),), "0" * 64)
+        summary = ObservationSummary((item,), (), (), (), "1" * 64)
+        run = ObservationRun(context, OnboardingRunState.OBSERVED, (), meter, summary, "2" * 64, "3" * 64)
+        self.assertIn("Repositories: Observed", format_understanding_meter(run))
+        self.assertIn("Observed", format_observation_summary(run))
+        self.assertIn("Repository observed.", format_observation_summary(run))
+
+    def test_observation_banner_is_scoped_to_onboarding_not_the_reasoning_console(self) -> None:
+        source = Path(__import__("rip.console.app", fromlist=["__file__"]).__file__).read_text(encoding="utf-8")
+        onboarding = source[source.index("class OnboardingWindow"):source.index("class RipConsole")]
+        console = source[source.index("class RipConsole"):]
+        self.assertIn("Customer Sources — Read Only", onboarding)
+        self.assertIn("Onboarding records are written only to the isolated RIP workspace.", onboarding)
+        self.assertNotIn("Observation Mode — Read Only", console)
 
 
 if __name__ == "__main__":

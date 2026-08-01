@@ -113,6 +113,12 @@ The console includes:
 - clear conversation and friendly error presentation.
 
 This console is intentionally temporary and contains no separate reasoning implementation. It calls `rip.reasoning.ask_repository` directly so it can later be replaced by the permanent application UI without changing RIP's reasoning architecture.
+
+## Phase 6A: Trust-first organization onboarding
+
+The console now includes **Organization Onboarding**, a separate, explicit onboarding window for a single organization and approved repository. Its persistent banner states **Customer Sources — Read Only** and discloses that onboarding records are written only to the isolated RIP-controlled workspace outside the observed repository. Phase 6A records deterministic repository observations and truthful discovery-feed events, and presents an evidence-linked Understanding Meter and Observation Summary.
+
+Customer repositories and approved external sources are never modified during Phase 6A. The phase does not promote governance, activate an organization, initialize Organizational Memory, take operational customer action, or call a provider during repository observation. Reasoning-capability validation verifies only local configuration and declared context support; live provider connectivity and model accessibility are not probed. Each onboarding attempt is a separately identified, restartable run; its audit and generated observation records remain in the isolated RIP workspace rather than in customer sources.
 # Knowledge Interpretation
 
 RIP can turn a validated `canonical-session.json` into traceable candidate
