@@ -7,13 +7,19 @@ from pathlib import Path
 
 from rip.onboarding import (
     CapabilityReadiness,
+    GuidedAnswerDisposition,
+    GuidedQuestionPriority,
+    GuidedQuestionType,
     ObservationMode,
     OrganizationContext,
     ReasoningCapability,
     UnderstandingState,
+    begin_guided_understanding,
     create_organization_workspace,
+    generate_guided_questions,
     observe_organization,
     recommend_reasoning_capability,
+    record_guided_answer,
     restart_onboarding_run,
     validate_reasoning_capability,
 )
@@ -153,7 +159,72 @@ class OrganizationOnboardingTests(unittest.TestCase):
         document = Path(__file__).resolve().parents[1] / "docs" / "architecture" / "RIP-6.0-Trust-First-Organization-Onboarding-Architecture.md"
         self.assertTrue(document.is_file())
         self.assertIn("Observe First, Ask Second, Propose Third, Activate Last", document.read_text(encoding="utf-8"))
+        guided_document = document.with_name("RIP-6.0-Phase-6B-Guided-Organizational-Understanding.md")
+        self.assertTrue(guided_document.is_file())
+        self.assertIn("Non-promotion Rule", guided_document.read_text(encoding="utf-8"))
+
+    def _observed_run(self, *, add_governance_signal: bool = False):
+        if add_governance_signal:
+            (self.repository / "governance-notes.md").write_text("metadata only", encoding="utf-8")
+        workspace = create_organization_workspace(self.base / "workspaces", organization_id="acme-org", display_name="Acme Organization", repository_path=self.repository)
+        context = restart_onboarding_run(workspace, repository_path=self.repository, reasoning_capability=recommend_reasoning_capability(environment=self.environment), environment=self.environment)
+        return observe_organization(context)
+
+    def test_guided_questions_are_deterministic_evidence_backed_and_prioritized(self) -> None:
+        observation = self._observed_run()
+        first = generate_guided_questions(observation)
+        second = generate_guided_questions(observation)
+        self.assertEqual(first, second)
+        self.assertEqual(len(first), len({item.resolution_key for item in first}))
+        self.assertEqual(GuidedQuestionType.IDENTIFY_AUTHORITY, first[0].question_type)
+        self.assertEqual(GuidedQuestionPriority.CRITICAL, first[0].priority)
+        for question in first:
+            self.assertTrue(question.observed)
+            self.assertTrue(question.why_this_question)
+            self.assertTrue(question.uncertainty_resolved)
+            self.assertTrue(question.understanding_change)
+            self.assertTrue(question.fingerprint)
+
+    def test_guided_answer_history_is_immutable_resumeable_and_not_authority(self) -> None:
+        observation = self._observed_run()
+        state = begin_guided_understanding(observation)
+        authority = next(item for item in state.questions if item.dimension == "Authority")
+        answered = record_guided_answer(observation, state, question_id=authority.question_id, respondent_identity="Pat", respondent_role="Engineer", authority_claim="claimed organizational participant", disposition=GuidedAnswerDisposition.ANSWERED, answer="The board maintains governance records.")
+        amended = record_guided_answer(observation, answered, question_id=authority.question_id, respondent_identity="Pat", respondent_role="Engineer", authority_claim="claimed organizational participant", disposition=GuidedAnswerDisposition.ANSWERED, answer="The board maintains the current governance records.")
+        self.assertEqual(2, len(amended.answer_history))
+        self.assertEqual(amended.answer_history[0].answer_id, amended.answer_history[1].supersedes_answer_id)
+        resumed = begin_guided_understanding(observation)
+        self.assertEqual(amended, resumed)
+        self.assertIn("supplied", amended.questions[0].understanding_change)
+        self.assertFalse((Path(observation.context.workspace_path) / "organizational-memory").exists())
+
+    def test_contradictions_authority_gaps_and_source_changes_are_explicit(self) -> None:
+        observation = self._observed_run()
+        state = begin_guided_understanding(observation)
+        authority = next(item for item in state.questions if item.dimension == "Authority")
+        self.assertGreater(state.summary.authority_gaps, 0)
+        first = record_guided_answer(observation, state, question_id=authority.question_id, respondent_identity="Pat", respondent_role="Executive", authority_claim="claimed", disposition=GuidedAnswerDisposition.ANSWERED, answer="Board")
+        conflicting = record_guided_answer(observation, first, question_id=authority.question_id, respondent_identity="Lee", respondent_role="Executive", authority_claim="claimed", disposition=GuidedAnswerDisposition.ANSWERED, answer="Founder")
+        self.assertGreater(conflicting.summary.contradictions, 0)
+        self.assertTrue(any(item.question_type is GuidedQuestionType.RESOLVE_CONTRADICTION for item in conflicting.questions))
+        (self.repository / "changed-after-observation.txt").write_text("change", encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "source changed"):
+            begin_guided_understanding(observation)
+        with self.assertRaisesRegex(RuntimeError, "source changed"):
+            record_guided_answer(observation, conflicting, question_id=authority.question_id, respondent_identity="New", respondent_role="", authority_claim="claimed", disposition=GuidedAnswerDisposition.ANSWERED, answer="Board")
+
+    def test_guided_understanding_never_modifies_customer_repository(self) -> None:
+        observation = self._observed_run()
+        before = {path.relative_to(self.repository).as_posix(): path.read_bytes() for path in self.repository.rglob("*") if path.is_file()}
+        state = begin_guided_understanding(observation)
+        question = state.questions[0]
+        record_guided_answer(observation, state, question_id=question.question_id, respondent_identity="Pat", respondent_role="", authority_claim="unknown", disposition=GuidedAnswerDisposition.UNKNOWN)
+        after = {path.relative_to(self.repository).as_posix(): path.read_bytes() for path in self.repository.rglob("*") if path.is_file()}
+        self.assertEqual(before, after)
 
 
 if __name__ == "__main__":
     unittest.main()
+    begin_guided_understanding,
+    generate_guided_questions,
+    record_guided_answer,

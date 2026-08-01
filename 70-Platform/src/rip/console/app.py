@@ -11,12 +11,16 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from ..onboarding import (
+    GuidedAnswerDisposition,
+    GuidedUnderstandingState,
     ObservationRun,
     ReasoningCapability,
     UnderstandingState,
+    begin_guided_understanding,
     create_organization_workspace,
     observe_organization,
     recommend_reasoning_capability,
+    record_guided_answer,
     restart_onboarding_run,
     validate_reasoning_capability,
 )
@@ -128,6 +132,8 @@ class OnboardingWindow(tk.Toplevel):
         self._busy = False
         self._capability = recommend_reasoning_capability()
         self._context = None
+        self._observation: ObservationRun | None = None
+        self._guided_state: GuidedUnderstandingState | None = None
         self.organization_id = tk.StringVar()
         self.organization_name = tk.StringVar()
         self.repository_path = tk.StringVar()
@@ -137,6 +143,10 @@ class OnboardingWindow(tk.Toplevel):
         self.readiness = tk.StringVar(value="Select a capability to check local configuration and declared context support. Live provider connectivity is not verified in Phase 6A.")
         self.activity = tk.StringVar(value="Ready to establish an isolated, read-only onboarding run.")
         self.next_stage = tk.StringVar(value="Next stage: observe approved repository evidence.")
+        self.respondent_identity = tk.StringVar()
+        self.respondent_role = tk.StringVar()
+        self.authority_claim = tk.StringVar(value="supplied by customer; authority not verified")
+        self.answer_disposition = tk.StringVar(value=GuidedAnswerDisposition.ANSWERED.value)
         self._build_ui()
         self.after(self.POLL_INTERVAL_MS, self._poll_events)
 
@@ -175,11 +185,31 @@ class OnboardingWindow(tk.Toplevel):
         self.summary = tk.Text(meter_frame, wrap="word", state="disabled", font=("Segoe UI", 9))
         self.summary.pack(fill="both", expand=True)
 
+        guided = ttk.LabelFrame(self, text="Guided Organizational Understanding", padding=8)
+        guided.grid(row=5, column=0, sticky="ew", padx=12, pady=(8, 0))
+        guided.columnconfigure(0, weight=1)
+        self.guided_details = tk.Text(guided, height=7, wrap="word", state="disabled", font=("Segoe UI", 9))
+        self.guided_details.grid(row=0, column=0, columnspan=4, sticky="ew")
+        ttk.Label(guided, text="Respondent").grid(row=1, column=0, sticky="w", pady=(6, 0))
+        ttk.Entry(guided, textvariable=self.respondent_identity, width=20).grid(row=1, column=1, sticky="ew", padx=4, pady=(6, 0))
+        ttk.Label(guided, text="Role").grid(row=1, column=2, sticky="w", pady=(6, 0))
+        ttk.Entry(guided, textvariable=self.respondent_role, width=20).grid(row=1, column=3, sticky="ew", padx=4, pady=(6, 0))
+        ttk.Label(guided, text="Authority claim").grid(row=2, column=0, sticky="w", pady=(4, 0))
+        ttk.Entry(guided, textvariable=self.authority_claim).grid(row=2, column=1, columnspan=3, sticky="ew", padx=4, pady=(4, 0))
+        ttk.Label(guided, text="Disposition").grid(row=3, column=0, sticky="w", pady=(4, 0))
+        ttk.Combobox(guided, textvariable=self.answer_disposition, state="readonly", values=tuple(item.value for item in GuidedAnswerDisposition)).grid(row=3, column=1, sticky="ew", padx=4, pady=(4, 0))
+        self.guided_answer = tk.Text(guided, height=3, wrap="word")
+        self.guided_answer.grid(row=4, column=0, columnspan=4, sticky="ew", pady=(4, 0))
+
         controls = ttk.Frame(self, padding=12)
-        controls.grid(row=5, column=0, sticky="ew")
+        controls.grid(row=6, column=0, sticky="ew")
         self.observe_button = ttk.Button(controls, text="Begin Read-Only Observation", command=self.begin_observation)
         self.observe_button.pack(side="left")
         ttk.Button(controls, text="Restart Onboarding Run", command=self.begin_observation).pack(side="left", padx=(8, 0))
+        self.guided_button = ttk.Button(controls, text="Begin / Resume Guided Understanding", command=self.begin_guided_understanding, state="disabled")
+        self.guided_button.pack(side="left", padx=(8, 0))
+        self.answer_button = ttk.Button(controls, text="Record Supplied Answer", command=self.record_guided_answer, state="disabled")
+        self.answer_button.pack(side="left", padx=(8, 0))
         ttk.Button(controls, text="Close", command=self.destroy).pack(side="right")
 
     def _field(self, parent: ttk.LabelFrame, label: str, variable: tk.StringVar, row: int, browse=None) -> None:
@@ -244,9 +274,11 @@ class OnboardingWindow(tk.Toplevel):
                     self.feed.insert(tk.END, f"{event.sequence + 1}. {event.message}")
                     self.activity.set(event.message)
                 elif event_type == "observed" and isinstance(payload, ObservationRun):
+                    self._observation = payload
                     self._replace_summary(format_understanding_meter(payload) + "\n\n" + format_observation_summary(payload))
                     self.activity.set("Read-only observation complete. Every summary item is linked to observed repository evidence; no customer-source modifications occurred.")
-                    self.next_stage.set("Next stage: guided interview and governance drafting are intentionally unavailable until Phase 6B.")
+                    self.next_stage.set("Next stage: begin deterministic guided understanding. Supplied answers remain non-governance and non-memory.")
+                    self.guided_button.configure(state="normal")
                     self._finish()
                 elif event_type == "error":
                     self.activity.set("Observation stopped: " + str(payload)); self.next_stage.set("Next stage: correct the displayed issue or start a fresh onboarding run.")
@@ -261,6 +293,53 @@ class OnboardingWindow(tk.Toplevel):
 
     def _finish(self) -> None:
         self._busy = False; self.observe_button.configure(state="normal")
+
+    def begin_guided_understanding(self) -> None:
+        if self._observation is None:
+            messagebox.showerror("Guided Understanding", "Complete a read-only observation before guided understanding.")
+            return
+        try:
+            self._guided_state = begin_guided_understanding(self._observation)
+            self._render_guided_question()
+            self.activity.set("Guided understanding uses deterministic questions derived from observed uncertainty. Customer sources remain read-only.")
+        except Exception as exc:
+            messagebox.showerror("Guided Understanding", str(exc))
+
+    def record_guided_answer(self) -> None:
+        if self._observation is None or self._guided_state is None:
+            return
+        question = self._current_guided_question()
+        if question is None:
+            return
+        try:
+            self._guided_state = record_guided_answer(
+                self._observation, self._guided_state, question_id=question.question_id,
+                respondent_identity=self.respondent_identity.get(), respondent_role=self.respondent_role.get(),
+                authority_claim=self.authority_claim.get(), disposition=GuidedAnswerDisposition(self.answer_disposition.get()),
+                answer=self.guided_answer.get("1.0", "end").strip(),
+            )
+            self.guided_answer.delete("1.0", "end")
+            self._render_guided_question()
+        except Exception as exc:
+            messagebox.showerror("Guided Understanding", str(exc))
+
+    def _current_guided_question(self):
+        if self._guided_state is None:
+            return None
+        addressed = {item.question_id for item in self._guided_state.answer_history}
+        return next((item for item in self._guided_state.questions if item.question_id not in addressed), None)
+
+    def _render_guided_question(self) -> None:
+        question = self._current_guided_question()
+        self.guided_details.configure(state="normal"); self.guided_details.delete("1.0", "end")
+        if question is None:
+            summary = self._guided_state.summary
+            self.guided_details.insert("1.0", f"No remaining unanswered questions. Readiness: {summary.readiness}; authority gaps: {summary.authority_gaps}; contradictions: {summary.contradictions}. No governance, approval, activation, or organizational memory was created.")
+            self.answer_button.configure(state="disabled")
+        else:
+            self.guided_details.insert("1.0", f"Question ({question.priority.value}): {question.prompt}\n\nObserved: {question.observed}\nWhy this exists: {question.why_this_question}\nUncertainty resolved: {question.uncertainty_resolved}\nUnderstanding change: {question.understanding_change}\nEvidence: {', '.join(question.evidence_paths) or 'observation scope'}")
+            self.answer_button.configure(state="normal")
+        self.guided_details.configure(state="disabled")
 
 
 class RipConsole(tk.Tk):

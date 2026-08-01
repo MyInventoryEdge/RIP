@@ -251,6 +251,17 @@ def observe_organization(
     return result
 
 
+def current_repository_fingerprint(context: OrganizationContext) -> str:
+    """Read-only source freshness check for a completed onboarding observation."""
+    if context.observation_mode is not ObservationMode.READ_ONLY:
+        raise ValueError("Customer sources must remain read-only during onboarding")
+    repository = Path(context.repository_path).resolve()
+    workspace = Path(context.workspace_path).resolve()
+    _assert_non_overlapping(repository, workspace)
+    value, _ = _repository_fingerprint(repository)
+    return value
+
+
 def _with_configuration(capability: ReasoningCapability, environment: Mapping[str, str]) -> ReasoningCapability:
     if capability.provider_id != "openai":
         return capability

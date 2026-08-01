@@ -36,6 +36,102 @@ class UnderstandingState(str, Enum):
     REQUIRES_CONFIRMATION = "requires-confirmation"
 
 
+class GuidedQuestionType(str, Enum):
+    CONFIRM_INTERPRETATION = "confirm-interpretation"
+    IDENTIFY_AUTHORITY = "identify-authority"
+    RESOLVE_CONTRADICTION = "resolve-contradiction"
+
+
+class GuidedQuestionPriority(str, Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    STANDARD = "standard"
+
+
+class GuidedAnswerDisposition(str, Enum):
+    ANSWERED = "answered"
+    DEFERRED = "deferred"
+    UNKNOWN = "unknown"
+    NOT_AUTHORIZED = "not-authorized"
+
+
+class GuidedUnderstandingStatus(str, Enum):
+    ACTIVE = "active"
+    STALE = "stale"
+    COMPLETE = "complete"
+
+
+@dataclass(frozen=True, slots=True)
+class GuidedQuestion:
+    """An evidence-backed uncertainty; it is not a governance request or conclusion."""
+
+    question_id: str
+    dimension: str
+    question_type: GuidedQuestionType
+    priority: GuidedQuestionPriority
+    prompt: str
+    observed: str
+    why_this_question: str
+    uncertainty_resolved: str
+    understanding_change: str
+    evidence_paths: tuple[str, ...]
+    observation_ids: tuple[str, ...]
+    resolution_key: str
+    fingerprint: str
+
+    def __post_init__(self) -> None:
+        if not all((self.question_id, self.dimension, self.prompt, self.observed, self.why_this_question, self.uncertainty_resolved, self.understanding_change, self.resolution_key)):
+            raise ValueError("guided questions require explicit evidence, uncertainty, and resolution purpose")
+
+
+@dataclass(frozen=True, slots=True)
+class GuidedAnswerRecord:
+    """Immutable supplied knowledge, retained separately from governance and memory."""
+
+    answer_id: str
+    question_id: str
+    sequence: int
+    respondent_identity: str
+    respondent_role: str
+    authority_claim: str
+    disposition: GuidedAnswerDisposition
+    answer: str
+    supersedes_answer_id: str | None
+    source_fingerprint: str
+    fingerprint: str
+
+    def __post_init__(self) -> None:
+        if self.sequence < 0 or not all((self.answer_id, self.question_id, self.respondent_identity, self.authority_claim, self.source_fingerprint, self.fingerprint)):
+            raise ValueError("guided answer records require immutable identity, source, and respondent provenance")
+        if self.disposition is GuidedAnswerDisposition.ANSWERED and not self.answer.strip():
+            raise ValueError("answered guided records require supplied answer text")
+
+
+@dataclass(frozen=True, slots=True)
+class GuidedUnderstandingSummary:
+    total_questions: int
+    answered_questions: int
+    unresolved_questions: int
+    authority_gaps: int
+    contradictions: int
+    readiness: str
+    fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class GuidedUnderstandingState:
+    """Run-scoped working understanding. It never promotes supplied answers to authority or memory."""
+
+    organization_id: str
+    onboarding_run_id: str
+    source_fingerprint: str
+    status: GuidedUnderstandingStatus
+    questions: tuple[GuidedQuestion, ...]
+    answer_history: tuple[GuidedAnswerRecord, ...]
+    summary: GuidedUnderstandingSummary
+    fingerprint: str
+
+
 @dataclass(frozen=True, slots=True)
 class ReasoningCapability:
     """A replaceable reasoning capability declaration; it is never organization identity."""
