@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from rip.onboarding import (
@@ -10,18 +11,24 @@ from rip.onboarding import (
     GuidedAnswerDisposition,
     GuidedQuestionPriority,
     GuidedQuestionType,
+    ProposalReadiness,
+    ProposedStatementType,
     ObservationMode,
     OrganizationContext,
     ReasoningCapability,
     UnderstandingState,
     begin_guided_understanding,
     create_organization_workspace,
+    confirm_interpretation,
     generate_guided_questions,
+    generate_understanding_proposal,
     observe_organization,
     recommend_reasoning_capability,
     record_guided_answer,
+    review_understanding_proposal,
     restart_onboarding_run,
     validate_reasoning_capability,
+    withdraw_record,
 )
 
 
@@ -162,6 +169,9 @@ class OrganizationOnboardingTests(unittest.TestCase):
         guided_document = document.with_name("RIP-6.0-Phase-6B-Guided-Organizational-Understanding.md")
         self.assertTrue(guided_document.is_file())
         self.assertIn("Non-promotion Rule", guided_document.read_text(encoding="utf-8"))
+        proposal_document = document.with_name("RIP-6.0-Phase-6C-Evidence-Based-Organizational-Understanding-Proposal.md")
+        self.assertTrue(proposal_document.is_file())
+        self.assertIn("Experience Layer", proposal_document.read_text(encoding="utf-8"))
 
     def _observed_run(self, *, add_governance_signal: bool = False):
         if add_governance_signal:
@@ -221,6 +231,56 @@ class OrganizationOnboardingTests(unittest.TestCase):
         record_guided_answer(observation, state, question_id=question.question_id, respondent_identity="Pat", respondent_role="", authority_claim="unknown", disposition=GuidedAnswerDisposition.UNKNOWN)
         after = {path.relative_to(self.repository).as_posix(): path.read_bytes() for path in self.repository.rglob("*") if path.is_file()}
         self.assertEqual(before, after)
+
+    def test_understanding_proposal_is_deterministic_provenance_backed_and_non_authoritative(self) -> None:
+        observation = self._observed_run()
+        state = begin_guided_understanding(observation)
+        first = generate_understanding_proposal(observation, state, generated_at="audit-one")
+        second = generate_understanding_proposal(observation, state, generated_at="audit-two")
+        self.assertEqual(first.proposal_id, second.proposal_id)
+        self.assertEqual(first.proposal_fingerprint, second.proposal_fingerprint)
+        self.assertNotEqual(first.generated_at, second.generated_at)
+        self.assertEqual(ProposalReadiness.HUMAN_REVIEW_REQUIRED, first.readiness)
+        self.assertTrue(first.authority_gaps)
+        self.assertTrue(all(statement.provenance for section in first.sections for statement in section.statements))
+        self.assertTrue(all(section.statements for section in first.sections))
+        self.assertTrue(any(statement.statement_type is ProposedStatementType.OUTSTANDING_UNKNOWN for section in first.sections for statement in section.statements))
+        self.assertFalse((Path(observation.context.workspace_path) / "organizational-memory").exists())
+
+    def test_confirmations_withdrawals_and_stale_sources_preserve_boundaries(self) -> None:
+        observation = self._observed_run(add_governance_signal=True)
+        state = begin_guided_understanding(observation)
+        authority = next(item for item in state.questions if item.dimension == "Authority")
+        answered = record_guided_answer(observation, state, question_id=authority.question_id, respondent_identity="Pat", respondent_role="Owner", authority_claim="accepted onboarding authority", disposition=GuidedAnswerDisposition.ANSWERED, answer="The owner maintains current governance.")
+        record = answered.answer_history[-1]
+        interpretation = confirm_interpretation(observation, answered, question_id=authority.question_id, answer_ids=(record.answer_id,), statement_text="The owner is the supplied governance contact.", authority_category="onboarding-owner", authority_accepted=True)
+        proposal = generate_understanding_proposal(observation, answered, confirmed_interpretations=(interpretation,))
+        self.assertIn(interpretation.interpretation_id, proposal.supporting_interpretation_ids)
+        withdrawal = withdraw_record(organization_id=observation.context.organization_id, onboarding_run_id=observation.context.onboarding_run_id, target_id=record.answer_id, target_type="answer", respondent_identity="Pat", reason="superseded supplied answer", source_fingerprint=observation.repository_fingerprint)
+        withdrawn = generate_understanding_proposal(observation, answered, withdrawals=(withdrawal,))
+        self.assertNotIn(record.answer_id, withdrawn.supporting_answer_ids)
+        (self.repository / "changed.txt").write_text("changed", encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "stale"):
+            generate_understanding_proposal(observation, answered)
+
+    def test_untrusted_confirmation_and_withdrawal_are_rejected_and_review_is_immutable(self) -> None:
+        observation = self._observed_run(add_governance_signal=True)
+        state = begin_guided_understanding(observation)
+        authority = next(item for item in state.questions if item.dimension == "Authority")
+        state = record_guided_answer(observation, state, question_id=authority.question_id, respondent_identity="Pat", respondent_role="Owner", authority_claim="accepted", disposition=GuidedAnswerDisposition.ANSWERED, answer="Owner")
+        answer = state.answer_history[-1]
+        interpretation = confirm_interpretation(observation, state, question_id=authority.question_id, answer_ids=(answer.answer_id,), statement_text="Owner supplied governance contact.", authority_category="owner", authority_accepted=True)
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            generate_understanding_proposal(observation, state, confirmed_interpretations=(replace(interpretation, question_fingerprint="0" * 64),))
+        invalid_withdrawal = withdraw_record(organization_id=observation.context.organization_id, onboarding_run_id=observation.context.onboarding_run_id, target_id="missing", target_type="answer", respondent_identity="Pat", reason="invalid", source_fingerprint=observation.repository_fingerprint)
+        with self.assertRaisesRegex(ValueError, "withdrawal target"):
+            generate_understanding_proposal(observation, state, withdrawals=(invalid_withdrawal,))
+        proposal = generate_understanding_proposal(observation, state, confirmed_interpretations=(interpretation,))
+        reviewed = review_understanding_proposal(observation, proposal)
+        proposals = Path(observation.context.workspace_path) / "onboarding-runs" / observation.context.onboarding_run_id / "proposals"
+        self.assertTrue((proposals / (proposal.proposal_id + ".json")).is_file())
+        self.assertTrue((proposals / (proposal.proposal_id + ".reviewed.json")).is_file())
+        self.assertNotEqual(proposal.proposal_status, reviewed.proposal_status)
 
 
 if __name__ == "__main__":

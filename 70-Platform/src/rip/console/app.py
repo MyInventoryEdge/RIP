@@ -13,11 +13,14 @@ from tkinter import filedialog, messagebox, ttk
 from ..onboarding import (
     GuidedAnswerDisposition,
     GuidedUnderstandingState,
+    OrganizationalUnderstandingProposal,
     ObservationRun,
     ReasoningCapability,
     UnderstandingState,
     begin_guided_understanding,
     create_organization_workspace,
+    generate_understanding_proposal,
+    review_understanding_proposal,
     observe_organization,
     recommend_reasoning_capability,
     record_guided_answer,
@@ -117,6 +120,32 @@ def format_observation_summary(result: ObservationRun) -> str:
     return "\n".join(lines)
 
 
+def format_understanding_proposal(proposal: OrganizationalUnderstandingProposal) -> str:
+    """Experience-layer rendering; internal enum values are never customer-facing."""
+    readiness = {
+        "preliminary": "Preliminary",
+        "evidence-complete": "Evidence Complete",
+        "human-review-required": "Human Review Required",
+        "governance-draft-ready": "Governance Draft Ready",
+    }[proposal.readiness.value]
+    labels = {
+        "directly-observed": "Direct observation",
+        "supplied-by-customer": "Customer-supplied knowledge",
+        "confirmed-interpretation": "Confirmed interpretation",
+        "unresolved": "Unresolved",
+        "contradicted": "Contradicted",
+        "authority-not-established": "Authority not established",
+        "historical-or-current-unconfirmed": "Historical or current status not confirmed",
+    }
+    lines = [f"Readiness: {readiness}", "Reasons: " + "; ".join(proposal.readiness_reasons), "Blockers: " + (", ".join(proposal.readiness_blockers) or "None"), "", "This proposal is not governance, Organizational Memory, approval, or activation."]
+    for section in proposal.sections:
+        lines.extend(("", section.title))
+        for statement in section.statements:
+            sources = ", ".join((*statement.provenance.observation_ids, *statement.provenance.answer_ids, *statement.provenance.interpretation_ids))
+            lines.append(f"- {labels[statement.epistemic_label.value]}: {statement.statement_text} [Why do you believe this? {sources or 'uncertainty record'}]")
+    return "\n".join(lines)
+
+
 class OnboardingWindow(tk.Toplevel):
     """Phase 6A organization onboarding: explicit, read-only observation only."""
 
@@ -134,6 +163,7 @@ class OnboardingWindow(tk.Toplevel):
         self._context = None
         self._observation: ObservationRun | None = None
         self._guided_state: GuidedUnderstandingState | None = None
+        self._proposal: OrganizationalUnderstandingProposal | None = None
         self.organization_id = tk.StringVar()
         self.organization_name = tk.StringVar()
         self.repository_path = tk.StringVar()
@@ -210,6 +240,10 @@ class OnboardingWindow(tk.Toplevel):
         self.guided_button.pack(side="left", padx=(8, 0))
         self.answer_button = ttk.Button(controls, text="Record Supplied Answer", command=self.record_guided_answer, state="disabled")
         self.answer_button.pack(side="left", padx=(8, 0))
+        self.proposal_button = ttk.Button(controls, text="Generate Understanding Proposal", command=self.generate_proposal, state="disabled")
+        self.proposal_button.pack(side="left", padx=(8, 0))
+        self.review_proposal_button = ttk.Button(controls, text="Mark Proposal Reviewed", command=self.review_proposal, state="disabled")
+        self.review_proposal_button.pack(side="left", padx=(8, 0))
         ttk.Button(controls, text="Close", command=self.destroy).pack(side="right")
 
     def _field(self, parent: ttk.LabelFrame, label: str, variable: tk.StringVar, row: int, browse=None) -> None:
@@ -301,6 +335,7 @@ class OnboardingWindow(tk.Toplevel):
         try:
             self._guided_state = begin_guided_understanding(self._observation)
             self._render_guided_question()
+            self.proposal_button.configure(state="normal")
             self.activity.set("Guided understanding uses deterministic questions derived from observed uncertainty. Customer sources remain read-only.")
         except Exception as exc:
             messagebox.showerror("Guided Understanding", str(exc))
@@ -340,6 +375,24 @@ class OnboardingWindow(tk.Toplevel):
             self.guided_details.insert("1.0", f"Question ({question.priority.value}): {question.prompt}\n\nObserved: {question.observed}\nWhy this exists: {question.why_this_question}\nUncertainty resolved: {question.uncertainty_resolved}\nUnderstanding change: {question.understanding_change}\nEvidence: {', '.join(question.evidence_paths) or 'observation scope'}")
             self.answer_button.configure(state="normal")
         self.guided_details.configure(state="disabled")
+
+    def generate_proposal(self) -> None:
+        if self._observation is None or self._guided_state is None:
+            return
+        try:
+            self._proposal = generate_understanding_proposal(self._observation, self._guided_state)
+            self._replace_summary(format_understanding_proposal(self._proposal))
+            self.activity.set("Understanding proposal generated from current evidence. This proposal is not governance, Organizational Memory, approval, or activation.")
+            self.review_proposal_button.configure(state="normal")
+        except Exception as exc:
+            messagebox.showerror("Understanding Proposal", str(exc))
+
+    def review_proposal(self) -> None:
+        if self._proposal is None:
+            return
+        self._proposal = review_understanding_proposal(self._observation, self._proposal)
+        self._replace_summary(format_understanding_proposal(self._proposal))
+        self.activity.set("Proposal marked reviewed. Reviewed does not mean approved.")
 
 
 class RipConsole(tk.Tk):

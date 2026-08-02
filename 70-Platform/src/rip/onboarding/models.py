@@ -61,6 +61,132 @@ class GuidedUnderstandingStatus(str, Enum):
     COMPLETE = "complete"
 
 
+class ProposalStatus(str, Enum):
+    GENERATED = "generated"
+    REVIEWED = "reviewed"
+    STALE = "stale"
+    SUPERSEDED = "superseded"
+    WITHDRAWN = "withdrawn"
+
+
+class ProposalReadiness(str, Enum):
+    PRELIMINARY = "preliminary"
+    EVIDENCE_COMPLETE = "evidence-complete"
+    HUMAN_REVIEW_REQUIRED = "human-review-required"
+    GOVERNANCE_DRAFT_READY = "governance-draft-ready"
+
+
+class ProposedStatementType(str, Enum):
+    DIRECT_OBSERVATION = "direct-observation"
+    SUPPLIED_KNOWLEDGE = "supplied-knowledge"
+    CONFIRMED_INTERPRETATION = "confirmed-interpretation"
+    COMPOSITE_UNDERSTANDING = "composite-understanding"
+    OUTSTANDING_UNKNOWN = "outstanding-unknown"
+    OUTSTANDING_CONTRADICTION = "outstanding-contradiction"
+    AUTHORITY_GAP = "authority-gap"
+    READINESS_ASSESSMENT = "readiness-assessment"
+
+
+class EpistemicLabel(str, Enum):
+    DIRECTLY_OBSERVED = "directly-observed"
+    SUPPLIED_BY_CUSTOMER = "supplied-by-customer"
+    CONFIRMED_INTERPRETATION = "confirmed-interpretation"
+    UNRESOLVED = "unresolved"
+    CONTRADICTED = "contradicted"
+    AUTHORITY_NOT_ESTABLISHED = "authority-not-established"
+    HISTORICAL_OR_CURRENT_UNCONFIRMED = "historical-or-current-unconfirmed"
+
+
+@dataclass(frozen=True, slots=True)
+class WithdrawalRecord:
+    withdrawal_id: str
+    organization_id: str
+    onboarding_run_id: str
+    target_id: str
+    target_type: str
+    respondent_identity: str
+    reason: str
+    source_fingerprint: str
+    fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class ConfirmedInterpretation:
+    interpretation_id: str
+    organization_id: str
+    onboarding_run_id: str
+    question_id: str
+    answer_ids: tuple[str, ...]
+    observation_ids: tuple[str, ...]
+    statement_text: str
+    authority_category: str
+    source_fingerprint: str
+    question_fingerprint: str
+    answer_fingerprints: tuple[str, ...]
+    fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class StatementProvenance:
+    observation_ids: tuple[str, ...]
+    answer_ids: tuple[str, ...]
+    interpretation_ids: tuple[str, ...]
+    uncertainty_ids: tuple[str, ...]
+    contradiction_ids: tuple[str, ...]
+    derivation_rules: tuple[str, ...]
+    fingerprint: str
+
+    def __post_init__(self) -> None:
+        if not any((self.observation_ids, self.answer_ids, self.interpretation_ids, self.uncertainty_ids, self.contradiction_ids)):
+            raise ValueError("every proposed statement requires provenance")
+
+
+@dataclass(frozen=True, slots=True)
+class ProposedUnderstandingStatement:
+    statement_id: str
+    statement_text: str
+    statement_type: ProposedStatementType
+    epistemic_label: EpistemicLabel
+    normalized_subject: str
+    provenance: StatementProvenance
+    provenance_fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class OrganizationalUnderstandingSection:
+    section_id: str
+    title: str
+    order: int
+    statements: tuple[ProposedUnderstandingStatement, ...]
+
+    def __post_init__(self) -> None:
+        if not self.statements:
+            raise ValueError("proposal sections must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class OrganizationalUnderstandingProposal:
+    proposal_id: str
+    organization_id: str
+    onboarding_run_id: str
+    source_snapshot_fingerprint: str
+    proposal_fingerprint: str
+    generation_order: int
+    generated_at: str | None
+    proposal_status: ProposalStatus
+    sections: tuple[OrganizationalUnderstandingSection, ...]
+    unresolved_uncertainty: tuple[str, ...]
+    contradictions: tuple[str, ...]
+    authority_gaps: tuple[str, ...]
+    supporting_observation_ids: tuple[str, ...]
+    supporting_answer_ids: tuple[str, ...]
+    supporting_interpretation_ids: tuple[str, ...]
+    reasoning_provenance: tuple[str, ...]
+    readiness: ProposalReadiness
+    readiness_reasons: tuple[str, ...]
+    readiness_blockers: tuple[str, ...]
+
+
 @dataclass(frozen=True, slots=True)
 class GuidedQuestion:
     """An evidence-backed uncertainty; it is not a governance request or conclusion."""

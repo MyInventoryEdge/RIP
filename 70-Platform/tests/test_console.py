@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rip.console.app import format_details, format_discovery_details, format_observation_summary, format_understanding_meter, format_voice_status, repository_relative_evidence
+from rip.console.app import format_details, format_discovery_details, format_observation_summary, format_understanding_meter, format_understanding_proposal, format_voice_status, repository_relative_evidence
 from rip.onboarding import (
     ObservationMode,
     ObservationRun,
@@ -99,6 +99,14 @@ class ConsoleFormattingTests(unittest.TestCase):
         self.assertIn("Customer Sources — Read Only", onboarding)
         self.assertIn("Onboarding records are written only to the isolated RIP workspace.", onboarding)
         self.assertNotIn("Observation Mode — Read Only", console)
+
+
+    def test_proposal_experience_layer_uses_human_language_and_non_authority_disclosure(self) -> None:
+        source = Path(__import__("rip.console.app", fromlist=["__file__"]).__file__).read_text(encoding="utf-8")
+        presentation = source[source.index("def format_understanding_proposal"):source.index("class OnboardingWindow")]
+        self.assertIn("Customer-supplied knowledge", presentation)
+        self.assertIn("This proposal is not governance, Organizational Memory, approval, or activation.", presentation)
+        self.assertNotIn("{statement.epistemic_label.value}", presentation)
 
 
 if __name__ == "__main__":
