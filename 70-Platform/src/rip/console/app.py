@@ -8,7 +8,7 @@ import time
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from ..onboarding import (
     GuidedAnswerDisposition,
@@ -19,12 +19,14 @@ from ..onboarding import (
     UnderstandingState,
     begin_guided_understanding,
     create_organization_workspace,
+    format_classification_review,
     generate_understanding_proposal,
     review_understanding_proposal,
     observe_organization,
     recommend_reasoning_capability,
     record_guided_answer,
     restart_onboarding_run,
+    load_classification_review,
     validate_reasoning_capability,
 )
 from ..observation import find_repository_root
@@ -37,6 +39,26 @@ from ..voice import VoiceManager, VoiceState
 class ConsoleResponse:
     answer: str
     details: str
+
+
+class ClassificationReviewWindow(tk.Toplevel):
+    """Read-only CZ-EC-4A presentation of retained classification artifacts."""
+    def __init__(self, parent: tk.Tk, workspace: str, run_id: str) -> None:
+        super().__init__(parent); self.title("RIP Classification Review"); self.geometry("900x680")
+        review = load_classification_review(workspace, run_id)
+        ttk.Label(self, text="Onboarding paused safely. Completed work was preserved.", font=("Segoe UI", 11, "bold"), padding=10).pack(anchor="w")
+        ttk.Label(self, text="RIP cannot decide an artifact's organizational role without authorized human judgment. Classification changes interpretation, never observation. No customer source was modified.", wraplength=850, padding=(10, 0, 10, 8)).pack(anchor="w")
+        pane = ttk.PanedWindow(self, orient="horizontal"); pane.pack(fill="both", expand=True, padx=10, pady=6)
+        left = ttk.LabelFrame(pane, text="Classification Requests", padding=6); right = ttk.LabelFrame(pane, text="Review and Diagnostics", padding=6); pane.add(left, weight=1); pane.add(right, weight=3)
+        requests = tk.Listbox(left); requests.pack(fill="both", expand=True)
+        detail = tk.Text(right, wrap="word", state="normal"); detail.pack(fill="both", expand=True)
+        detail.insert("1.0", format_classification_review(review))
+        for item in review.requests: requests.insert(tk.END, str(item.get("target", "unknown artifact")))
+        def select(_: object) -> None:
+            if requests.curselection():
+                item = review.requests[requests.curselection()[0]]; detail.delete("1.0", "end"); detail.insert("1.0", format_classification_review(review) + "\n\nSelected request:\n" + str(item))
+        requests.bind("<<ListboxSelect>>", select)
+        ttk.Button(self, text="Show Complete Diagnostics", command=lambda: (detail.delete("1.0", "end"), detail.insert("1.0", format_classification_review(review, diagnostics=True)))).pack(pady=6)
 
 
 def repository_relative_evidence(path: str | Path, root: str | Path | None = None) -> str:
@@ -236,6 +258,7 @@ class OnboardingWindow(tk.Toplevel):
         self.observe_button = ttk.Button(controls, text="Begin Read-Only Observation", command=self.begin_observation)
         self.observe_button.pack(side="left")
         ttk.Button(controls, text="Restart Onboarding Run", command=self.begin_observation).pack(side="left", padx=(8, 0))
+        ttk.Button(controls, text="Review Classification", command=self.open_classification_review).pack(side="left", padx=(8, 0))
         self.guided_button = ttk.Button(controls, text="Begin / Resume Guided Understanding", command=self.begin_guided_understanding, state="disabled")
         self.guided_button.pack(side="left", padx=(8, 0))
         self.answer_button = ttk.Button(controls, text="Record Supplied Answer", command=self.record_guided_answer, state="disabled")
@@ -259,6 +282,12 @@ class OnboardingWindow(tk.Toplevel):
     def _choose_workspace(self) -> None:
         selected = filedialog.askdirectory(title="Select RIP-controlled onboarding workspace")
         if selected: self.workspace_path.set(selected)
+
+    def open_classification_review(self) -> None:
+        run_id = self._context.onboarding_run_id if self._context else simpledialog.askstring("Classification Review", "Onboarding run ID to inspect:", parent=self)
+        if not run_id or not self.workspace_path.get().strip(): return
+        try: ClassificationReviewWindow(self, self.workspace_path.get(), run_id)
+        except Exception as exc: messagebox.showerror("Classification Review", str(exc))
 
     def _selected_capability(self) -> ReasoningCapability:
         return ReasoningCapability(self.provider_id.get().strip(), self.model.get().strip(), self.provider_id.get().strip() or "Provider", True, True, False)

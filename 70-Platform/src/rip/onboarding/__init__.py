@@ -77,6 +77,7 @@ from .classification_lifecycle import (
     request_evidence_classification,
     resume_after_classification,
 )
+from .classification_review import ClassificationReview, format_classification_review, load_classification_review
 
 __all__ = [
     "CapabilityReadiness",
@@ -99,6 +100,7 @@ __all__ = [
     "EvidenceClassificationPolicy",
     "EvaluatedEvidenceEntry",
     "AttentionEvent",
+    "ClassificationReview",
     "GuidedAnswerDisposition",
     "GuidedAnswerRecord",
     "GuidedQuestion",
@@ -134,6 +136,7 @@ __all__ = [
     "create_evidence_classification",
     "evaluate_classification_policy",
     "evaluate_classification_readiness",
+    "format_classification_review",
     "current_repository_fingerprint",
     "begin_guided_understanding",
     "generate_guided_questions",
@@ -143,6 +146,7 @@ __all__ = [
     "record_guided_answer",
     "request_evidence_classification",
     "resume_after_classification",
+    "load_classification_review",
     "load_contract_payload",
     "persist_contract",
     "serialize_contract",

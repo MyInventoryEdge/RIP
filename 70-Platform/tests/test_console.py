@@ -22,6 +22,17 @@ from rip.reasoning.models import ReasoningResult
 
 
 class ConsoleFormattingTests(unittest.TestCase):
+
+    def test_classification_review_console_is_read_only_and_uses_shared_review_model(self) -> None:
+        source = (Path(__file__).resolve().parents[1] / "src" / "rip" / "console" / "app.py").read_text(encoding="utf-8")
+        self.assertIn("class ClassificationReviewWindow", source)
+        self.assertIn("load_classification_review", source)
+        self.assertIn("format_classification_review", source)
+        self.assertIn("Review Classification", source)
+        self.assertIn("Show Complete Diagnostics", source)
+        self.assertIn("Onboarding paused safely. Completed work was preserved.", source)
+        self.assertNotIn("resume_after_classification(", source)
+        self.assertNotIn("create_classification_decision(", source)
     def test_primary_evidence_becomes_repository_relative_and_rejects_outside(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "RIP"; root.mkdir(); (root / ".git").mkdir()
