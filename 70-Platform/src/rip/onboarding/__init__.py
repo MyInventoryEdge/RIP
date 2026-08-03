@@ -62,6 +62,13 @@ from .classification import (
     persist_contract,
     serialize_contract,
 )
+from .classification_engine import (
+    ClassificationConflict,
+    ClassificationEvaluation,
+    ClassificationSummary,
+    EvaluatedEvidenceEntry,
+    evaluate_classification_policy,
+)
 
 __all__ = [
     "CapabilityReadiness",
@@ -70,6 +77,9 @@ __all__ = [
     "ClassificationRequest",
     "ClassificationRequestStatus",
     "ClassificationScope",
+    "ClassificationConflict",
+    "ClassificationEvaluation",
+    "ClassificationSummary",
     "DEFAULT_REASONING_CAPABILITIES",
     "DiscoveryFeedEvent",
     "ConfirmedInterpretation",
@@ -77,6 +87,7 @@ __all__ = [
     "EvidenceClass",
     "EvidenceClassification",
     "EvidenceClassificationPolicy",
+    "EvaluatedEvidenceEntry",
     "GuidedAnswerDisposition",
     "GuidedAnswerRecord",
     "GuidedQuestion",
@@ -110,6 +121,7 @@ __all__ = [
     "create_classification_policy",
     "create_classification_request",
     "create_evidence_classification",
+    "evaluate_classification_policy",
     "current_repository_fingerprint",
     "begin_guided_understanding",
     "generate_guided_questions",
