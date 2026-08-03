@@ -69,6 +69,14 @@ from .classification_engine import (
     EvaluatedEvidenceEntry,
     evaluate_classification_policy,
 )
+from .classification_lifecycle import (
+    AttentionEvent,
+    ClassificationReadiness,
+    ClassificationRecoveryState,
+    evaluate_classification_readiness,
+    request_evidence_classification,
+    resume_after_classification,
+)
 
 __all__ = [
     "CapabilityReadiness",
@@ -80,6 +88,8 @@ __all__ = [
     "ClassificationConflict",
     "ClassificationEvaluation",
     "ClassificationSummary",
+    "ClassificationReadiness",
+    "ClassificationRecoveryState",
     "DEFAULT_REASONING_CAPABILITIES",
     "DiscoveryFeedEvent",
     "ConfirmedInterpretation",
@@ -88,6 +98,7 @@ __all__ = [
     "EvidenceClassification",
     "EvidenceClassificationPolicy",
     "EvaluatedEvidenceEntry",
+    "AttentionEvent",
     "GuidedAnswerDisposition",
     "GuidedAnswerRecord",
     "GuidedQuestion",
@@ -122,6 +133,7 @@ __all__ = [
     "create_classification_request",
     "create_evidence_classification",
     "evaluate_classification_policy",
+    "evaluate_classification_readiness",
     "current_repository_fingerprint",
     "begin_guided_understanding",
     "generate_guided_questions",
@@ -129,6 +141,8 @@ __all__ = [
     "recommend_reasoning_capability",
     "restart_onboarding_run",
     "record_guided_answer",
+    "request_evidence_classification",
+    "resume_after_classification",
     "load_contract_payload",
     "persist_contract",
     "serialize_contract",

@@ -18,6 +18,7 @@ class ObservationMode(str, Enum):
 
 class OnboardingRunState(str, Enum):
     CREATED = "created"
+    AWAITING_CLASSIFICATION = "awaiting-classification"
     OBSERVED = "observed"
     INTERRUPTED = "interrupted"
 

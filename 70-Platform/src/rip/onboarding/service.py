@@ -179,8 +179,11 @@ def observe_organization(
     run_root = workspace / "onboarding-runs" / context.onboarding_run_id
     if not run_root.is_dir() or _read_json(run_root / "context.json") != _payload(context):
         raise ValueError("Onboarding context is not an initialized isolated run")
-    if _read_json(run_root / "state.json").get("state") == OnboardingRunState.OBSERVED.value:
+    current_state = _read_json(run_root / "state.json").get("state")
+    if current_state == OnboardingRunState.OBSERVED.value:
         raise ValueError("Onboarding run is already complete; start a new run to observe again.")
+    if current_state != OnboardingRunState.CREATED.value:
+        raise ValueError("Onboarding run is not ready for observation; completed, interrupted, and awaiting-classification runs must not be observed again.")
 
     events: list[DiscoveryFeedEvent] = []
 
