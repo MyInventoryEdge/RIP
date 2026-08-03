@@ -79,6 +79,7 @@ from .classification_lifecycle import (
 )
 from .classification_review import ClassificationReview, format_classification_review, load_classification_review
 from .policy_history import PolicyReconstruction, reconstruct_policy_history
+from .scope_preview import ScopePreview, preview_scope, validate_preview
 
 __all__ = [
     "CapabilityReadiness",
@@ -103,6 +104,7 @@ __all__ = [
     "AttentionEvent",
     "ClassificationReview",
     "PolicyReconstruction",
+    "ScopePreview",
     "GuidedAnswerDisposition",
     "GuidedAnswerRecord",
     "GuidedQuestion",
@@ -150,6 +152,7 @@ __all__ = [
     "resume_after_classification",
     "load_classification_review",
     "reconstruct_policy_history",
+    "preview_scope", "validate_preview",
     "load_contract_payload",
     "persist_contract",
     "serialize_contract",
