@@ -33,6 +33,9 @@ class ClassificationReadiness(str, Enum):
     READY = "ready"
     AWAITING_CLASSIFICATION = "awaiting-classification"
     CONFLICTED = "conflicted"
+    BLOCKED_BY_CONFLICT = "blocked-by-conflict"
+    STALE_POLICY = "stale-policy"
+    STALE_SOURCE = "stale-source"
 
 
 @dataclass(frozen=True, slots=True)
