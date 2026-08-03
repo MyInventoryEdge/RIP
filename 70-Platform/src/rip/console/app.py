@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import queue
 import tempfile
 import threading
@@ -28,6 +29,14 @@ from ..onboarding import (
     restart_onboarding_run,
     load_classification_review,
     validate_reasoning_capability,
+    ClassificationRequest,
+    ClassificationReadiness,
+    EvidenceClass,
+    IntegrityTreatment,
+    accept_decision,
+    integrate_persisted_classifications,
+    load_persisted_classification_request,
+    preview_scope,
 )
 from ..observation import find_repository_root
 from ..reasoning import ReasoningResult, ask_repository
@@ -39,6 +48,72 @@ from ..voice import VoiceManager, VoiceState
 class ConsoleResponse:
     answer: str
     details: str
+
+
+@dataclass(frozen=True, slots=True)
+class ConsoleDecisionResult:
+    """Console orchestration result; interpretation remains in promoted services."""
+
+    request: ClassificationRequest
+    decision_id: str
+    classification_id: str
+    readiness: ClassificationReadiness
+    blocking_conditions: tuple[str, ...]
+
+
+def submit_console_classification_decision(
+    *, workspace: str, onboarding_run_id: str, request_id: str,
+    evidence_class: EvidenceClass, integrity_treatment: IntegrityTreatment,
+    reviewer_identity: str, reviewer_role: str, authority_claim: str, rationale: str,
+) -> ConsoleDecisionResult:
+    """Invoke the promoted acceptance and integration services for one request."""
+    root = Path(workspace)
+    request = load_persisted_classification_request(str(root), onboarding_run_id, request_id)
+    manifest_path = root / "onboarding-runs" / onboarding_run_id / "final-source-manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("retained manifest is unavailable for classification decision") from exc
+    if not isinstance(manifest, dict):
+        raise ValueError("retained manifest is invalid for classification decision")
+    preview = preview_scope(manifest, target=request.target, scope=request.scope)
+    decision, record = accept_decision(
+        workspace=str(root), manifest=manifest, request=request, preview=preview,
+        evidence_class=evidence_class, integrity_treatment=integrity_treatment,
+        reviewer_identity=reviewer_identity, reviewer_role=reviewer_role,
+        authority_claim=authority_claim, rationale=rationale,
+    )
+    integration = integrate_persisted_classifications(
+        workspace=root, onboarding_run_id=onboarding_run_id,
+    )
+    conditions = tuple(
+        item for item in (
+            "Unresolved classification requests remain." if integration.unresolved_request_ids else "",
+            "Effective classifications conflict." if integration.readiness is ClassificationReadiness.BLOCKED_BY_CONFLICT else "",
+            "Policy is stale for the retained manifest." if integration.readiness is ClassificationReadiness.STALE_POLICY else "",
+            "Retained source binding is stale." if integration.readiness is ClassificationReadiness.STALE_SOURCE else "",
+        ) if item
+    )
+    return ConsoleDecisionResult(
+        request=request, decision_id=decision.decision_id,
+        classification_id=record.classification_id, readiness=integration.readiness,
+        blocking_conditions=conditions,
+    )
+
+
+def format_classification_readiness(result: ConsoleDecisionResult) -> str:
+    lines = [
+        f"Decision accepted: {result.decision_id}",
+        f"Classification recorded: {result.classification_id}",
+        f"Readiness: {result.readiness.value}",
+    ]
+    if result.blocking_conditions:
+        lines.append("Blocking conditions:")
+        lines.extend(f"- {item}" for item in result.blocking_conditions)
+    else:
+        lines.append("No blocking condition was reported by the readiness service.")
+    lines.append("No customer source was modified. Onboarding was not resumed.")
+    return "\n".join(lines)
 
 
 class ClassificationReviewWindow(tk.Toplevel):
@@ -58,7 +133,81 @@ class ClassificationReviewWindow(tk.Toplevel):
             if requests.curselection():
                 item = review.requests[requests.curselection()[0]]; detail.delete("1.0", "end"); detail.insert("1.0", format_classification_review(review) + "\n\nSelected request:\n" + str(item))
         requests.bind("<<ListboxSelect>>", select)
-        ttk.Button(self, text="Show Complete Diagnostics", command=lambda: (detail.delete("1.0", "end"), detail.insert("1.0", format_classification_review(review, diagnostics=True)))).pack(pady=6)
+        controls = ttk.Frame(self, padding=6); controls.pack(fill="x")
+        ttk.Button(controls, text="Show Complete Diagnostics", command=lambda: (detail.delete("1.0", "end"), detail.insert("1.0", format_classification_review(review, diagnostics=True)))).pack(side="left")
+        def enter_decision() -> None:
+            if not requests.curselection():
+                messagebox.showerror("Classification Decision", "Select a persisted classification request first.", parent=self)
+                return
+            item = review.requests[requests.curselection()[0]]
+            request_id = item.get("request_id")
+            if not isinstance(request_id, str):
+                messagebox.showerror("Classification Decision", "The selected request has no valid identity.", parent=self)
+                return
+            ClassificationDecisionWindow(self, workspace, run_id, request_id, on_complete=lambda message: detail.insert("end", "\n\n" + message))
+        ttk.Button(controls, text="Enter Governed Decision", command=enter_decision).pack(side="right")
+
+
+class ClassificationDecisionWindow(tk.Toplevel):
+    """Thin console control surface over promoted decision and readiness services."""
+
+    def __init__(self, parent: tk.Toplevel, workspace: str, run_id: str, request_id: str, on_complete) -> None:
+        super().__init__(parent); self.title("RIP Governed Classification Decision"); self.geometry("760x600"); self.transient(parent)
+        self._workspace, self._run_id, self._request_id, self._on_complete = workspace, run_id, request_id, on_complete
+        request = load_persisted_classification_request(workspace, run_id, request_id)
+        manifest = json.loads((Path(workspace) / "onboarding-runs" / run_id / "final-source-manifest.json").read_text(encoding="utf-8"))
+        preview = preview_scope(manifest, target=request.target, scope=request.scope)
+        self._evidence_class = tk.StringVar(value=request.proposed_evidence_class.value)
+        self._integrity = tk.StringVar(value=request.proposed_integrity_treatment.value)
+        self._identity = tk.StringVar(); self._role = tk.StringVar(); self._authority = tk.StringVar()
+        self._build(request, preview)
+
+    def _build(self, request: ClassificationRequest, preview) -> None:
+        frame = ttk.Frame(self, padding=12); frame.pack(fill="both", expand=True); frame.columnconfigure(1, weight=1)
+        ttk.Label(frame, text="Immutable Request and Scope Preview", font=("Segoe UI", 11, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")
+        request_text = (
+            f"Request: {request.request_id}\nTarget: {request.target}\nScope: {request.scope.value}\n"
+            f"Proposed treatment: {request.proposed_evidence_class.value} / {request.proposed_integrity_treatment.value}\n"
+            f"Rationale: {request.rationale}\nSource manifest: {request.source_manifest_fingerprint}\n\n"
+            f"Exact-path or broader scope preview: {preview.total_matches} retained entries\n"
+            f"Kinds: {', '.join(f'{kind}: {count}' for kind, count in preview.counts_by_kind)}\n"
+            f"Examples: {', '.join(preview.example_paths[:10])}\n\n"
+            "Continuation effects: this writes immutable decision records and displays readiness only. It does not resume onboarding, verify customer sources, or change lifecycle state."
+        )
+        details = tk.Text(frame, height=13, wrap="word"); details.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(6, 10)); details.insert("1.0", request_text); details.configure(state="disabled")
+        self._field(frame, "Evidence class", self._evidence_class, 2, tuple(item.value for item in EvidenceClass), readonly=True)
+        self._field(frame, "Integrity treatment", self._integrity, 3, tuple(item.value for item in IntegrityTreatment), readonly=True)
+        self._field(frame, "Reviewer identity", self._identity, 4)
+        self._field(frame, "Reviewer role", self._role, 5)
+        self._field(frame, "Authority claim", self._authority, 6)
+        ttk.Label(frame, text="Rationale").grid(row=7, column=0, sticky="nw", pady=3)
+        self._rationale = tk.Text(frame, height=4, wrap="word"); self._rationale.grid(row=7, column=1, sticky="ew", pady=3)
+        ttk.Button(frame, text="Confirm and Submit Governed Decision", command=self._submit).grid(row=8, column=1, sticky="e", pady=(12, 0))
+
+    @staticmethod
+    def _field(parent, label: str, variable: tk.StringVar, row: int, values: tuple[str, ...] | None = None, readonly: bool = False) -> None:
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=3)
+        if values:
+            ttk.Combobox(parent, textvariable=variable, values=values, state="readonly" if readonly else "normal").grid(row=row, column=1, sticky="ew", pady=3)
+        else:
+            ttk.Entry(parent, textvariable=variable).grid(row=row, column=1, sticky="ew", pady=3)
+
+    def _submit(self) -> None:
+        if not messagebox.askyesno("Confirm governed decision", "Submit this immutable classification decision? This cannot resume onboarding.", parent=self):
+            return
+        try:
+            result = submit_console_classification_decision(
+                workspace=self._workspace, onboarding_run_id=self._run_id, request_id=self._request_id,
+                evidence_class=EvidenceClass(self._evidence_class.get()), integrity_treatment=IntegrityTreatment(self._integrity.get()),
+                reviewer_identity=self._identity.get(), reviewer_role=self._role.get(), authority_claim=self._authority.get(),
+                rationale=self._rationale.get("1.0", "end").strip(),
+            )
+        except Exception as exc:
+            messagebox.showerror("Classification Decision", str(exc), parent=self); return
+        message = format_classification_readiness(result)
+        self._on_complete(message)
+        messagebox.showinfo("Classification Decision", message, parent=self)
+        self.destroy()
 
 
 def repository_relative_evidence(path: str | Path, root: str | Path | None = None) -> str:

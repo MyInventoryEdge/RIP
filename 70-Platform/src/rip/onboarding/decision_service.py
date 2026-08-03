@@ -30,6 +30,34 @@ def load_persisted_contracts(workspace: str, run_id: str, kind: str) -> tuple[di
     return tuple(load_contract_payload(path)["contract"] for path in sorted(directory.glob("*.json")))
 
 
+def load_persisted_classification_request(
+    workspace: str, run_id: str, request_id: str,
+) -> ClassificationRequest:
+    """Load one retained immutable request for presentation or acceptance.
+
+    This is a typed loading boundary only. It does not evaluate readiness,
+    reconstruct policy, or modify onboarding lifecycle state.
+    """
+    matches = tuple(
+        item for item in load_persisted_contracts(workspace, run_id, "requests")
+        if item.get("request_id") == request_id
+    )
+    if len(matches) != 1:
+        raise ValueError("classification request is missing or not uniquely persisted")
+    values = dict(matches[0])
+    supplied_fingerprint = values.pop("fingerprint", None)
+    try:
+        values["scope"] = ClassificationScope(values["scope"])
+        values["proposed_evidence_class"] = EvidenceClass(values["proposed_evidence_class"])
+        values["proposed_integrity_treatment"] = IntegrityTreatment(values["proposed_integrity_treatment"])
+        request = create_classification_request(**values)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("persisted classification request is invalid") from exc
+    if request.fingerprint != supplied_fingerprint:
+        raise ValueError("persisted classification request fingerprint does not match")
+    return request
+
+
 def accept_decision(
     *,
     workspace: str,
