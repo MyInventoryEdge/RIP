@@ -31,6 +31,8 @@ from .models import (
 
 WORKSPACE_SCHEMA = "rip.organization-workspace.v1"
 ONBOARDING_SCHEMA = "rip.organization-onboarding.v1"
+SOURCE_MANIFEST_SCHEMA = "rip.source-manifest.v1"
+INTEGRITY_DIFFERENCE_SCHEMA = "rip.source-integrity-difference.v1"
 DEFAULT_REASONING_CAPABILITIES = (
     ReasoningCapability(
         provider_id="openai",
@@ -194,12 +196,16 @@ def observe_organization(
         if progress_callback:
             progress_callback(event)
 
-    emit("repository-fingerprint-started", "Repository fingerprint started.")
-    before, before_count = _repository_fingerprint(
+    emit("repository-fingerprint-started", "Approved source baseline started.")
+    _append_stage(workspace, context, "initial-fingerprint", "started", 0, ())
+    before_manifest = _source_manifest(
         repository,
         progress=lambda count, path: emit("repository-fingerprint-progress", f"Repository fingerprint processed {count} entries.", (), (path,), count),
     )
-    emit("repository-fingerprint-completed", f"Repository fingerprint completed after {before_count} entries.", processed_entries=before_count)
+    _write_json(run_root / "initial-source-manifest.json", before_manifest)
+    before, before_count = before_manifest["aggregate_fingerprint"], before_manifest["entry_count"]
+    _append_stage(workspace, context, "initial-fingerprint", "completed", before_count, (before,))
+    emit("repository-fingerprint-completed", f"Approved source baseline completed after {before_count} entries.", processed_entries=before_count)
     emit("repository-observation-started", "Repository observation started.")
     observations = observe_filesystem(repository)
     root_observation = next(item for item in observations.observations if item.kind == "repository_root")
@@ -210,11 +216,15 @@ def observe_organization(
         (root_observation.relative_path,),
         len(observations.observations),
     )
-    emit("repository-integrity-verification-started", "Repository integrity verification started.", (root_observation.observation_id,), (root_observation.relative_path,))
-    after, after_count = _repository_fingerprint(
+    emit("repository-integrity-verification-started", "Source integrity verification started.", (root_observation.observation_id,), (root_observation.relative_path,))
+    _append_stage(workspace, context, "integrity-verification", "started", 0, (before,))
+    after_manifest = _source_manifest(
         repository,
         progress=lambda count, path: emit("repository-integrity-verification-progress", f"Repository integrity verification processed {count} entries.", (), (path,), count),
     )
+    _write_json(run_root / "final-source-manifest.json", after_manifest)
+    after, after_count = after_manifest["aggregate_fingerprint"], after_manifest["entry_count"]
+    _append_stage(workspace, context, "integrity-verification", "completed", after_count, (after,))
     emit(
         "repository-integrity-verification-completed",
         f"Repository integrity verification completed after {after_count} entries.",
@@ -223,9 +233,12 @@ def observe_organization(
         after_count,
     )
     if before != after:
+        difference = _manifest_difference(before_manifest, after_manifest)
+        _write_json(run_root / "integrity-difference.json", difference)
         _write_json(run_root / "state.json", {"schema": ONBOARDING_SCHEMA, "state": OnboardingRunState.INTERRUPTED.value})
-        _append_audit(workspace, "repository-change-detected", {"run_id": context.onboarding_run_id})
-        raise RuntimeError("Repository changed during read-only observation; no onboarding result was accepted.")
+        _append_stage(workspace, context, "run", "interrupted", after_count, (before, after, difference["difference_fingerprint"]))
+        _append_audit(workspace, "repository-change-detected", {"run_id": context.onboarding_run_id, "difference_fingerprint": difference["difference_fingerprint"]})
+        raise RuntimeError("Observation stopped because the approved source changed while RIP was establishing its trusted baseline. No onboarding result was accepted. RIP preserved the comparison details so the changed items can be reviewed.")
 
     emit("evidence-classification-summary-construction", "Evidence classification and observation-summary construction started.", (root_observation.observation_id,), (root_observation.relative_path,))
     feed = _discovery_feed(observations, start_sequence=len(events))
@@ -348,6 +361,49 @@ def _repository_fingerprint(root: Path, *, progress: Callable[[int, str], None] 
         if progress:
             progress(count, relative)
     return fingerprint(entries), count
+
+
+def _source_manifest(root: Path, *, progress: Callable[[int, str], None] | None = None) -> dict[str, object]:
+    entries = []
+    counts = {"file": 0, "directory": 0, "symlink": 0, "access-error": 0}
+    total_bytes = 0
+    for count, path in enumerate(_walk_paths(root), 1):
+        relative = path.relative_to(root).as_posix()
+        try:
+            if path.is_symlink():
+                entry = {"path": relative, "kind": "symlink", "value": os.readlink(path), "size": None}
+            elif path.is_file():
+                size = path.stat().st_size; total_bytes += size
+                entry = {"path": relative, "kind": "file", "value": hashlib.sha256(path.read_bytes()).hexdigest(), "size": size}
+            elif path.is_dir():
+                entry = {"path": relative, "kind": "directory", "value": None, "size": None}
+            else:
+                entry = {"path": relative, "kind": "access-error", "value": "unsupported", "size": None}
+        except OSError as exc:
+            entry = {"path": relative, "kind": "access-error", "value": type(exc).__name__, "size": None}
+        counts[entry["kind"]] = counts.get(entry["kind"], 0) + 1
+        entries.append(entry)
+        if progress: progress(count, relative)
+    semantic = {"schema": SOURCE_MANIFEST_SCHEMA, "entries": entries, "counts": counts, "total_readable_bytes": total_bytes}
+    aggregate_entries = [(item["path"], item["kind"], item["value"]) for item in entries if item["kind"] != "directory"]
+    return {**semantic, "entry_count": len(entries), "aggregate_fingerprint": fingerprint(aggregate_entries), "manifest_fingerprint": fingerprint(semantic)}
+
+
+def _manifest_difference(before: dict[str, object], after: dict[str, object]) -> dict[str, object]:
+    left = {item["path"]: item for item in before["entries"]}; right = {item["path"]: item for item in after["entries"]}
+    added = tuple(sorted(set(right) - set(left))); removed = tuple(sorted(set(left) - set(right)))
+    modified = tuple(sorted(path for path in set(left) & set(right) if left[path]["kind"] == right[path]["kind"] == "file" and left[path]["value"] != right[path]["value"]))
+    kind_changed = tuple(sorted(path for path in set(left) & set(right) if left[path]["kind"] != right[path]["kind"]))
+    access_changed = tuple(sorted(path for path in set(left) & set(right) if "access-error" in {left[path]["kind"], right[path]["kind"]} and left[path] != right[path]))
+    payload = {"schema": INTEGRITY_DIFFERENCE_SCHEMA, "added_paths": added, "removed_paths": removed, "modified_content_paths": modified, "kind_changed_paths": kind_changed, "access_state_changed_paths": access_changed, "initial_entry_count": before["entry_count"], "final_entry_count": after["entry_count"], "initial_fingerprint": before["aggregate_fingerprint"], "final_fingerprint": after["aggregate_fingerprint"]}
+    return {**payload, "difference_fingerprint": fingerprint(payload)}
+
+
+def _append_stage(workspace: Path, context: OrganizationContext, stage: str, state: str, processed: int, references: tuple[str, ...]) -> None:
+    path = workspace / "onboarding-runs" / context.onboarding_run_id / "stages.json"
+    records = _read_json(path) if path.exists() else []
+    record = {"run_id": context.onboarding_run_id, "stage": stage, "state": state, "operational_timestamp": __import__("datetime").datetime.now(__import__("datetime").UTC).isoformat(), "processed_entry_count": processed, "references": list(references)}
+    _write_json(path, [*records, record])
 
 
 def _walk_paths(root: Path):
