@@ -17,6 +17,7 @@ from .classification import (
     IntegrityTreatment,
     _to_json,
     create_classification_request,
+    create_classification_decision, create_evidence_classification, create_classification_policy,
     persist_contract,
 )
 from .classification_engine import ClassificationEvaluation, evaluate_classification_policy
@@ -112,6 +113,39 @@ def evaluate_classification_readiness(context: OrganizationContext, policy: Evid
     evaluation = evaluate_classification_policy(final_manifest, policy)
     readiness = ClassificationReadiness.CONFLICTED if evaluation.conflicts else (ClassificationReadiness.AWAITING_CLASSIFICATION if evaluation.summary.unknown_entries else ClassificationReadiness.READY)
     return readiness, evaluation
+
+
+def preview_classification_scope(context: OrganizationContext, *, target: str, scope: ClassificationScope) -> tuple[dict[str, object], ...]:
+    """Deterministic, read-only affected-path preview from the retained manifest."""
+    from .classification_engine import _matches
+    from .classification import EvidenceClassification
+    _, _, manifest = _completed_run(context, allow_awaiting=True)
+    probe = EvidenceClassification("preview", context.organization_id, context.onboarding_run_id, target, scope, EvidenceClass.UNKNOWN, IntegrityTreatment.BLOCKING, str(manifest["manifest_fingerprint"]), "preview", "0" * 64, None, "0" * 64)
+    return tuple(item for item in manifest["entries"] if _matches(probe, item["path"]))
+
+
+def accept_classification_decision(context: OrganizationContext, request: ClassificationRequest, *, evidence_class: EvidenceClass, integrity_treatment: IntegrityTreatment, reviewer_identity: str, reviewer_role: str, authority_claim: str, rationale: str, broader_scope_confirmed: bool = False) -> tuple[ClassificationDecision, EvidenceClassificationPolicy]:
+    """Persist an approved immutable decision, record, and policy snapshot; never changes source."""
+    workspace, run_root, manifest = _completed_run(context, allow_awaiting=True)
+    if request.organization_id != context.organization_id or request.onboarding_run_id != context.onboarding_run_id or request.source_manifest_fingerprint != manifest["manifest_fingerprint"]:
+        raise ValueError("classification request is stale or outside this onboarding run")
+    if request.scope is ClassificationScope.PATH_GLOB:
+        affected = preview_classification_scope(context, target=request.target, scope=request.scope)
+        if not affected or not broader_scope_confirmed:
+            raise ValueError("broader scope requires non-empty deterministic preview and explicit confirmation")
+    seed = {"request": request.fingerprint, "class": evidence_class.value, "treatment": integrity_treatment.value, "authority": authority_claim, "rationale": rationale}
+    decision = create_classification_decision(decision_id="decision-" + fingerprint(seed)[:24], request_id=request.request_id, request_fingerprint=request.fingerprint, organization_id=context.organization_id, onboarding_run_id=context.onboarding_run_id, status=ClassificationRequestStatus.APPROVED, decided_evidence_class=evidence_class, decided_integrity_treatment=integrity_treatment, reviewer_identity=reviewer_identity, reviewer_role=reviewer_role, authority_claim=authority_claim, rationale=rationale, supersedes_decision_id=None, decided_at=None)
+    record = create_evidence_classification(classification_id="record-" + decision.fingerprint[:24], organization_id=context.organization_id, onboarding_run_id=context.onboarding_run_id, target=request.target, scope=request.scope, evidence_class=evidence_class, integrity_treatment=integrity_treatment, source_manifest_fingerprint=str(manifest["manifest_fingerprint"]), decision_id=decision.decision_id, decision_fingerprint=decision.fingerprint, supersedes_classification_id=None)
+    persist_contract(workspace, decision); persist_contract(workspace, record)
+    prior = tuple(sorted((run_root / "classifications" / "records").glob("*.json")))
+    records = [record]
+    # Existing persisted records are immutable history; policy snapshots remain append-only.
+    for path in prior:
+        if path.stem != record.classification_id:
+            continue
+    policy = create_classification_policy(policy_id="policy-" + fingerprint({"records": [record.fingerprint]})[:24], organization_id=context.organization_id, onboarding_run_id=context.onboarding_run_id, source_manifest_fingerprint=str(manifest["manifest_fingerprint"]), classifications=tuple(records))
+    persist_contract(workspace, policy)
+    return decision, policy
 
 
 def resume_after_classification(context: OrganizationContext, policy: EvidenceClassificationPolicy, *, decisions: tuple[ClassificationDecision, ...]) -> ClassificationRecoveryState:

@@ -78,6 +78,7 @@ from .classification_lifecycle import (
     resume_after_classification,
 )
 from .classification_review import ClassificationReview, format_classification_review, load_classification_review
+from .policy_history import PolicyReconstruction, reconstruct_policy_history
 
 __all__ = [
     "CapabilityReadiness",
@@ -101,6 +102,7 @@ __all__ = [
     "EvaluatedEvidenceEntry",
     "AttentionEvent",
     "ClassificationReview",
+    "PolicyReconstruction",
     "GuidedAnswerDisposition",
     "GuidedAnswerRecord",
     "GuidedQuestion",
@@ -147,6 +149,7 @@ __all__ = [
     "request_evidence_classification",
     "resume_after_classification",
     "load_classification_review",
+    "reconstruct_policy_history",
     "load_contract_payload",
     "persist_contract",
     "serialize_contract",

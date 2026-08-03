@@ -1,0 +1,3 @@
+# CZ-EC-4B1A Immutable Policy Reconstruction
+
+`reconstruct_policy_history` consumes immutable classification records for one organization, onboarding run, and source manifest. It sorts history deterministically, rejects duplicate identities and invalid scope or supersession references, removes explicitly superseded records from the effective set, and detects conflicting effective records for the same target and scope. A conflict yields no effective policy; otherwise a deterministic immutable policy snapshot is returned. The service performs no customer-source access, decision acceptance, lifecycle mutation, UI work, or resume.
