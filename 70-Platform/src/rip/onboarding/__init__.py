@@ -81,7 +81,8 @@ from .classification_review import ClassificationReview, format_classification_r
 from .policy_history import PolicyReconstruction, reconstruct_policy_history
 from .classification_integration import ClassificationIntegrationResult, integrate_persisted_classifications
 from .scope_preview import ScopePreview, preview_scope, validate_preview
-from .decision_service import accept_decision, load_persisted_classification_request
+from .decision_service import accept_decision, load_persisted_classification_decisions, load_persisted_classification_request
+from .resume_orchestration import ResumeOrchestrationResult, resume_governed_onboarding
 
 __all__ = [
     "CapabilityReadiness",
@@ -158,7 +159,10 @@ __all__ = [
     "integrate_persisted_classifications",
     "preview_scope", "validate_preview",
     "accept_decision",
+    "load_persisted_classification_decisions",
     "load_persisted_classification_request",
+    "ResumeOrchestrationResult",
+    "resume_governed_onboarding",
     "load_contract_payload",
     "persist_contract",
     "serialize_contract",

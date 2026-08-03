@@ -58,6 +58,29 @@ def load_persisted_classification_request(
     return request
 
 
+def load_persisted_classification_decisions(
+    workspace: str, run_id: str,
+) -> tuple[ClassificationDecision, ...]:
+    """Load retained immutable decisions for the lifecycle resume boundary."""
+    loaded: list[ClassificationDecision] = []
+    for raw in load_persisted_contracts(workspace, run_id, "decisions"):
+        values = dict(raw)
+        supplied_fingerprint = values.pop("fingerprint", None)
+        try:
+            values["status"] = ClassificationRequestStatus(values["status"])
+            if values.get("decided_evidence_class") is not None:
+                values["decided_evidence_class"] = EvidenceClass(values["decided_evidence_class"])
+            if values.get("decided_integrity_treatment") is not None:
+                values["decided_integrity_treatment"] = IntegrityTreatment(values["decided_integrity_treatment"])
+            decision = create_classification_decision(**values)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("persisted classification decision is invalid") from exc
+        if decision.fingerprint != supplied_fingerprint:
+            raise ValueError("persisted classification decision fingerprint does not match")
+        loaded.append(decision)
+    return tuple(loaded)
+
+
 def accept_decision(
     *,
     workspace: str,

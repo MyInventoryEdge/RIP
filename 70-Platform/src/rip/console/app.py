@@ -37,6 +37,7 @@ from ..onboarding import (
     integrate_persisted_classifications,
     load_persisted_classification_request,
     preview_scope,
+    resume_governed_onboarding,
 )
 from ..observation import find_repository_root
 from ..reasoning import ReasoningResult, ask_repository
@@ -146,6 +147,17 @@ class ClassificationReviewWindow(tk.Toplevel):
                 return
             ClassificationDecisionWindow(self, workspace, run_id, request_id, on_complete=lambda message: detail.insert("end", "\n\n" + message))
         ttk.Button(controls, text="Enter Governed Decision", command=enter_decision).pack(side="right")
+        def resume() -> None:
+            if not messagebox.askyesno("Fresh source verification", "Verify the current source against the retained manifest and continue only if readiness is READY?", parent=self):
+                return
+            try:
+                result = resume_governed_onboarding(workspace=workspace, onboarding_run_id=run_id)
+                text = f"Readiness: {result.readiness.value}\n{result.message}"
+                detail.insert("end", "\n\n" + text)
+                messagebox.showinfo("Safe Resume", text, parent=self)
+            except Exception as exc:
+                messagebox.showerror("Safe Resume", str(exc), parent=self)
+        ttk.Button(controls, text="Verify Source and Resume", command=resume).pack(side="right", padx=(0, 8))
 
 
 class ClassificationDecisionWindow(tk.Toplevel):
