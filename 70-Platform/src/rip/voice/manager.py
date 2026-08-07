@@ -11,6 +11,8 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from ..paths import voice_configuration_path
+
 VOICES = ("alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse", "marin", "cedar")
 TEST_PHRASE = "Hello. I am RIP. My voice interface is active."
 LOGGER = logging.getLogger(__name__)
@@ -83,7 +85,7 @@ class OpenAISpeechProvider:
 class VoiceManager:
     """The public, state-owning boundary between the console and voice services."""
     def __init__(self, path: Path | None = None, provider=None, playback=None):
-        self.path = path or Path.cwd() / ".rip-voice" / "config.json"
+        self.path = path or voice_configuration_path()
         self.provider = provider or OpenAISpeechProvider()
         self.playback = playback or _play
         self._state = VoiceState.IDLE

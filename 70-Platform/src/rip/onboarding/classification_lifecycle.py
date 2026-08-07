@@ -22,7 +22,8 @@ from .classification import (
 )
 from .classification_engine import ClassificationEvaluation, evaluate_classification_policy
 from .models import OnboardingRunState, OrganizationContext, fingerprint
-from .service import ONBOARDING_SCHEMA, _read_json, _source_manifest, _write_json
+from .service import ONBOARDING_SCHEMA, _read_json, _write_json
+from .service import resolve_onboarding_run_directory, resolve_organization_workspace
 
 
 CLASSIFICATION_LIFECYCLE_SCHEMA = "rip.evidence-classification-lifecycle.v1"
@@ -151,16 +152,15 @@ def accept_classification_decision(context: OrganizationContext, request: Classi
     return decision, policy
 
 
-def resume_after_classification(context: OrganizationContext, policy: EvidenceClassificationPolicy, *, decisions: tuple[ClassificationDecision, ...]) -> ClassificationRecoveryState:
-    """Reverify the complete source, then record evaluation; no checkpoint is continued unsafely."""
+def resume_after_classification(context: OrganizationContext, policy: EvidenceClassificationPolicy, *, decisions: tuple[ClassificationDecision, ...], journal_context: dict[str, object] | None = None) -> ClassificationRecoveryState:
+    """Consume classification evidence; platform trust execution owns continuation.
+
+    Classification never traverses a customer source or writes a lifecycle
+    transition.  Its result is an input to the one platform executor.
+    """
     workspace, run_root, final_manifest = _completed_run(context, allow_awaiting=True)
     if _read_json(run_root / "state.json").get("state") != OnboardingRunState.AWAITING_CLASSIFICATION.value:
         raise ValueError("onboarding run is not awaiting classification")
-    current = _source_manifest(Path(context.repository_path).resolve())
-    if current["manifest_fingerprint"] != final_manifest["manifest_fingerprint"]:
-        _write_json(run_root / "resume-integrity-difference.json", {"expected_manifest_fingerprint": final_manifest["manifest_fingerprint"], "actual_manifest_fingerprint": current["manifest_fingerprint"]})
-        _write_json(run_root / "state.json", {"schema": ONBOARDING_SCHEMA, "state": OnboardingRunState.INTERRUPTED.value})
-        raise RuntimeError("Source changed before classification resume; preserved onboarding work was not continued.")
     _validate_approved_decisions(context, policy, decisions)
     readiness, evaluation = evaluate_classification_readiness(context, policy)
     _write_json(run_root / "classification-evaluation.json", _json(evaluation))
@@ -168,7 +168,20 @@ def resume_after_classification(context: OrganizationContext, policy: EvidenceCl
     recovery = _recovery(context, str(final_manifest["manifest_fingerprint"]), existing.request_ids, readiness, evaluation.fingerprint)
     _write_json(run_root / "classification-recovery.json", _json(recovery))
     if readiness is ClassificationReadiness.READY:
-        _write_json(run_root / "state.json", {"schema": ONBOARDING_SCHEMA, "state": OnboardingRunState.OBSERVED.value})
+        from ..mutation import MutationInterpretation, TrustAction
+        from ..trust_actions import execute_trust_action
+        interpretation = MutationInterpretation((), TrustAction.CONTINUE, "Approved classification evidence resolves the declared review scope.", fingerprint({"policy": policy.fingerprint, "evaluation": evaluation.fingerprint}))
+        if journal_context is None:
+            from ..platform_provisioning import load_trust_authority_context
+            journal_context = load_trust_authority_context().journal_context()
+        execute_trust_action(
+            run_directory=run_root, interpretation=interpretation,
+            expected_state=OnboardingRunState.AWAITING_CLASSIFICATION.value, target_state=OnboardingRunState.OBSERVED.value,
+            observation_identifier="classification-" + context.onboarding_run_id,
+            evidence_identifiers=(evaluation.fingerprint,),
+            policy={"policy_identifier": policy.policy_id, "version": "1", "authority": "approved classification policy", "precedence": 200},
+            journal_context=journal_context,
+        )
     return recovery
 
 
@@ -185,8 +198,8 @@ def _validate_approved_decisions(context: OrganizationContext, policy: EvidenceC
 
 
 def _completed_run(context: OrganizationContext, *, allow_awaiting: bool = False) -> tuple[Path, Path, dict[str, object]]:
-    workspace = Path(context.workspace_path).resolve()
-    run_root = workspace / "onboarding-runs" / context.onboarding_run_id
+    workspace = resolve_organization_workspace(context.workspace_path, context.organization_id)
+    run_root = resolve_onboarding_run_directory(context.workspace_path, context.organization_id, context.onboarding_run_id)
     state = _read_json(run_root / "state.json").get("state")
     allowed = {OnboardingRunState.OBSERVED.value}
     if allow_awaiting:

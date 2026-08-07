@@ -122,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
             print("Validation: PASS")
             return 0
         if args.command == "voice":
-            manager = VoiceManager(Path.cwd() / ".rip-voice" / "config.json")
+            manager = VoiceManager()
             if args.voice_command == "microphones":
                 for item in manager.list_microphones(): print(f"{'* ' if item.default else '  '}{item.index}: {item.name} ({item.channels} input channels, {item.sample_rate} Hz)")
                 return 0

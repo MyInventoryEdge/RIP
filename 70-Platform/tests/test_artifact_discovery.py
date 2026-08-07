@@ -75,7 +75,7 @@ class ArtifactDiscoveryTests(unittest.TestCase):
         excluded = {item.candidate.repository_relative_path: item.reason for item in result.report.excluded_artifacts}
         self.assertEqual(excluded["00-Constitution/RIP-000-Constitution.md"], "already-supplied-by-foundation")
         self.assertEqual(excluded["70-Platform/tests/test_discovery.py"], "test-artifact")
-        self.assertEqual(excluded["70-Platform/.rip-state/state.json"], "runtime-state")
+        self.assertNotIn("70-Platform/.rip-state/state.json", excluded)
         self.assertEqual(excluded["scratch/review.tmp"], "temporary-artifact")
         self.assertEqual(excluded["assets/logo.png"], "binary-or-unsupported-extension")
         self.assertEqual(excluded["60-Reference/Knowledge/out/candidate-review.md"], "generated-artifact")

@@ -3,7 +3,8 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import Mapping, Sequence
 
 from .models import Observation, ObservationSet
 
@@ -134,6 +135,99 @@ def observe_filesystem(
     )
 
 
+def observe_source_manifest(
+    root: str | Path,
+    entries: Sequence[Mapping[str, object]],
+    *,
+    include_hidden: bool = False,
+    exclusions: frozenset[str] = DEFAULT_EXCLUSIONS,
+) -> ObservationSet:
+    """Project filesystem observations from an exact source-manifest pass.
+
+    This avoids a redundant third repository walk. It does not infer content or
+    authority; it produces the same path/type evidence as ``observe_filesystem``
+    from entries already read during the governed source baseline.
+    """
+    # A governed manifest is already anchored to the operator-approved root;
+    # never rediscover and promote an ancestor repository here.
+    root_path = Path(root).expanduser().resolve()
+    if not root_path.is_dir():
+        raise FileNotFoundError(f"Observation root is not a directory: {root_path}")
+    observed_at = datetime.now(timezone.utc)
+    observations = [
+        _make_observation(
+            root=root_path,
+            path=root_path,
+            kind="repository_root",
+            observed_at=observed_at,
+            evidence=_root_evidence(root_path),
+            metadata={"name": root_path.name},
+        )
+    ]
+    for entry in entries:
+        relative = entry.get("path")
+        source_kind = entry.get("kind")
+        if not isinstance(relative, str) or not relative or not isinstance(source_kind, str):
+            raise ValueError("source manifest entries require path and kind")
+        if _manifest_path_is_excluded(relative, include_hidden=include_hidden, exclusions=exclusions):
+            continue
+        path = root_path.joinpath(*PurePosixPath(relative).parts)
+        if source_kind == "directory":
+            observations.append(
+                _make_observation(
+                    root=root_path,
+                    path=path,
+                    kind="directory",
+                    observed_at=observed_at,
+                    evidence=("filesystem entry is a directory",),
+                )
+            )
+        elif source_kind == "symlink":
+            observations.append(
+                _make_observation(
+                    root=root_path,
+                    path=path,
+                    kind="symbolic_link",
+                    observed_at=observed_at,
+                    evidence=("filesystem entry is a symbolic link",),
+                    metadata={"target": str(path.resolve(strict=False))},
+                )
+            )
+        elif source_kind == "file":
+            size = entry.get("size")
+            if not isinstance(size, int) or size < 0:
+                raise ValueError(f"source manifest file has invalid size: {relative}")
+            observations.append(
+                _make_observation(
+                    root=root_path,
+                    path=path,
+                    kind=_file_kind(path),
+                    observed_at=observed_at,
+                    evidence=_file_evidence(path),
+                    metadata={"size_bytes": size, "suffix": path.suffix.lower()},
+                )
+            )
+        elif source_kind == "access-error":
+            observations.append(
+                _make_observation(
+                    root=root_path,
+                    path=path,
+                    kind="access_error",
+                    observed_at=observed_at,
+                    evidence=(str(entry.get("value") or "filesystem entry could not be read"),),
+                )
+            )
+        else:
+            raise ValueError(f"source manifest entry has unsupported kind: {source_kind}")
+    observations.sort(key=lambda item: (item.relative_path.casefold(), item.kind))
+    return ObservationSet(
+        root=root_path,
+        observed_at=observed_at,
+        observations=tuple(observations),
+        excluded_names=tuple(sorted(exclusions)),
+    )
+
+
 def _make_observation(
     *,
     root: Path,
@@ -176,6 +270,21 @@ def _is_excluded(path: Path, exclusions: frozenset[str]) -> bool:
         return True
     if path.is_dir() and path.name.casefold().endswith(".egg-info"):
         return True
+    return False
+
+
+def _manifest_path_is_excluded(
+    relative: str,
+    *,
+    include_hidden: bool,
+    exclusions: frozenset[str],
+) -> bool:
+    parts = PurePosixPath(relative).parts
+    for part in parts:
+        if part in exclusions or part.casefold().endswith(".egg-info"):
+            return True
+        if not include_hidden and part.startswith("."):
+            return True
     return False
 
 

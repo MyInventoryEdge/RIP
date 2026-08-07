@@ -38,7 +38,11 @@ from ..onboarding import (
     load_persisted_classification_request,
     preview_scope,
     resume_governed_onboarding,
+    resolve_organization_workspace,
+    create_archival_source_snapshot,
+    RecoverySnapshotProgress,
 )
+from ..paths import onboarding_run_directory, storage_directory
 from ..observation import find_repository_root
 from ..reasoning import ReasoningResult, ask_repository
 from ..reasoning.service import DiscoveryDecision
@@ -62,15 +66,63 @@ class ConsoleDecisionResult:
     blocking_conditions: tuple[str, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class OnboardingStagePresentation:
+    stage: str
+    summary: str
+    next_action: str
+    allow_decision: bool
+    allow_resume: bool
+    allow_recovery_snapshot: bool
+
+
+def classification_review_stage(review) -> OnboardingStagePresentation:
+    """Translate retained technical state into an actionable human workflow."""
+    if review.state == "interrupted":
+        return OnboardingStagePresentation(
+            "Recovery required",
+            "RIP stopped because the source changed while it was establishing a trusted baseline. Completed diagnostic work was preserved.",
+            "Evidence is already preserved. Review the exact integrity difference; archival capture is optional.",
+            False, False, True,
+        )
+    if review.state == "paused-affected-scope":
+        return OnboardingStagePresentation(
+            "Affected scope paused",
+            "RIP preserved the run and paused only evidence whose meaning remains unresolved; unaffected observation remains trusted.",
+            "Next: review RIP's explanation and resolve the focused affected scope, or close safely and return later.",
+            False, True, False,
+        )
+    if review.readiness == ClassificationReadiness.READY.value:
+        return OnboardingStagePresentation(
+            "Ready for safe continuation",
+            "All governed classification requirements are satisfied. RIP still requires fresh source verification before continuing.",
+            "Next: select Verify Source and Continue.",
+            False, True, False,
+        )
+    if review.requests:
+        return OnboardingStagePresentation(
+            "Decision required",
+            "Onboarding is safely paused until an authorized reviewer resolves the listed classification request.",
+            "Next: select a request, review its scope, and enter a governed decision.",
+            True, False, False,
+        )
+    return OnboardingStagePresentation(
+        "Paused — review required",
+        "This run is paused, but no actionable classification request is present.",
+        "Next: open diagnostics and review the retained run state before taking further action.",
+        False, False, False,
+    )
+
+
 def submit_console_classification_decision(
-    *, workspace: str, onboarding_run_id: str, request_id: str,
+    *, workspace: str, organization_id: str, onboarding_run_id: str, request_id: str,
     evidence_class: EvidenceClass, integrity_treatment: IntegrityTreatment,
     reviewer_identity: str, reviewer_role: str, authority_claim: str, rationale: str,
 ) -> ConsoleDecisionResult:
     """Invoke the promoted acceptance and integration services for one request."""
-    root = Path(workspace)
+    root = resolve_organization_workspace(workspace, organization_id)
     request = load_persisted_classification_request(str(root), onboarding_run_id, request_id)
-    manifest_path = root / "onboarding-runs" / onboarding_run_id / "final-source-manifest.json"
+    manifest_path = onboarding_run_directory(root, onboarding_run_id) / "final-source-manifest.json"
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -119,23 +171,28 @@ def format_classification_readiness(result: ConsoleDecisionResult) -> str:
 
 class ClassificationReviewWindow(tk.Toplevel):
     """Read-only CZ-EC-4A presentation of retained classification artifacts."""
-    def __init__(self, parent: tk.Tk, workspace: str, run_id: str) -> None:
-        super().__init__(parent); self.title("RIP Classification Review"); self.geometry("900x680")
-        review = load_classification_review(workspace, run_id)
-        ttk.Label(self, text="Onboarding paused safely. Completed work was preserved.", font=("Segoe UI", 11, "bold"), padding=10).pack(anchor="w")
-        ttk.Label(self, text="RIP cannot decide an artifact's organizational role without authorized human judgment. Classification changes interpretation, never observation. No customer source was modified.", wraplength=850, padding=(10, 0, 10, 8)).pack(anchor="w")
+    def __init__(self, parent: tk.Tk, workspace: str, organization_id: str, run_id: str) -> None:
+        super().__init__(parent); self.title("RIP Onboarding Review and Recovery"); self.geometry("960x720")
+        review = load_classification_review(workspace, organization_id, run_id)
+        stage = classification_review_stage(review)
+        ttk.Label(self, text=f"Current stage: {stage.stage}", font=("Segoe UI", 13, "bold"), padding=(12, 12, 12, 4)).pack(anchor="w")
+        ttk.Label(self, text=stage.summary, wraplength=900, padding=(12, 0, 12, 4)).pack(anchor="w")
+        recovery_status = tk.StringVar(value=stage.next_action)
+        ttk.Label(self, textvariable=recovery_status, wraplength=900, font=("Segoe UI", 10, "bold"), padding=(12, 0, 12, 8)).pack(anchor="w")
+        ttk.Label(self, text="Customer sources remain read-only. The preserved run will not be rewritten.", wraplength=900, padding=(12, 0, 12, 8)).pack(anchor="w")
         pane = ttk.PanedWindow(self, orient="horizontal"); pane.pack(fill="both", expand=True, padx=10, pady=6)
-        left = ttk.LabelFrame(pane, text="Classification Requests", padding=6); right = ttk.LabelFrame(pane, text="Review and Diagnostics", padding=6); pane.add(left, weight=1); pane.add(right, weight=3)
+        left = ttk.LabelFrame(pane, text="Required decisions", padding=6); right = ttk.LabelFrame(pane, text="Run summary and diagnostics", padding=6); pane.add(left, weight=1); pane.add(right, weight=3)
         requests = tk.Listbox(left); requests.pack(fill="both", expand=True)
         detail = tk.Text(right, wrap="word", state="normal"); detail.pack(fill="both", expand=True)
         detail.insert("1.0", format_classification_review(review))
         for item in review.requests: requests.insert(tk.END, str(item.get("target", "unknown artifact")))
+        if not review.requests: requests.insert(tk.END, "No classification decisions required")
         def select(_: object) -> None:
             if requests.curselection():
                 item = review.requests[requests.curselection()[0]]; detail.delete("1.0", "end"); detail.insert("1.0", format_classification_review(review) + "\n\nSelected request:\n" + str(item))
         requests.bind("<<ListboxSelect>>", select)
         controls = ttk.Frame(self, padding=6); controls.pack(fill="x")
-        ttk.Button(controls, text="Show Complete Diagnostics", command=lambda: (detail.delete("1.0", "end"), detail.insert("1.0", format_classification_review(review, diagnostics=True)))).pack(side="left")
+        ttk.Button(controls, text="View integrity and run diagnostics", command=lambda: (detail.delete("1.0", "end"), detail.insert("1.0", format_classification_review(review, diagnostics=True)))).pack(side="left")
         def enter_decision() -> None:
             if not requests.curselection():
                 messagebox.showerror("Classification Decision", "Select a persisted classification request first.", parent=self)
@@ -145,29 +202,31 @@ class ClassificationReviewWindow(tk.Toplevel):
             if not isinstance(request_id, str):
                 messagebox.showerror("Classification Decision", "The selected request has no valid identity.", parent=self)
                 return
-            ClassificationDecisionWindow(self, workspace, run_id, request_id, on_complete=lambda message: detail.insert("end", "\n\n" + message))
-        ttk.Button(controls, text="Enter Governed Decision", command=enter_decision).pack(side="right")
+            ClassificationDecisionWindow(self, workspace, organization_id, run_id, request_id, on_complete=lambda message: detail.insert("end", "\n\n" + message))
+        ttk.Button(controls, text="Review selected decision", command=enter_decision, state="normal" if stage.allow_decision else "disabled").pack(side="right")
         def resume() -> None:
-            if not messagebox.askyesno("Fresh source verification", "Verify the current source against the retained manifest and continue only if readiness is READY?", parent=self):
+            if not messagebox.askyesno("Execute governed decision", "Execute the already persisted platform trust decision? RIP will not reinterpret the source.", parent=self):
                 return
             try:
-                result = resume_governed_onboarding(workspace=workspace, onboarding_run_id=run_id)
+                result = resume_governed_onboarding(workspace=workspace, organization_id=organization_id, onboarding_run_id=run_id)
                 text = f"Readiness: {result.readiness.value}\n{result.message}"
                 detail.insert("end", "\n\n" + text)
                 messagebox.showinfo("Safe Resume", text, parent=self)
             except Exception as exc:
                 messagebox.showerror("Safe Resume", str(exc), parent=self)
-        ttk.Button(controls, text="Verify Source and Resume", command=resume).pack(side="right", padx=(0, 8))
+        ttk.Button(controls, text="Execute governed decision", command=resume, state="normal" if stage.allow_resume else "disabled").pack(side="right", padx=(0, 8))
+        ttk.Button(controls, text="Close and return later", command=self.destroy).pack(side="right", padx=(0, 8))
 
 
 class ClassificationDecisionWindow(tk.Toplevel):
     """Thin console control surface over promoted decision and readiness services."""
 
-    def __init__(self, parent: tk.Toplevel, workspace: str, run_id: str, request_id: str, on_complete) -> None:
+    def __init__(self, parent: tk.Toplevel, workspace: str, organization_id: str, run_id: str, request_id: str, on_complete) -> None:
         super().__init__(parent); self.title("RIP Governed Classification Decision"); self.geometry("760x600"); self.transient(parent)
-        self._workspace, self._run_id, self._request_id, self._on_complete = workspace, run_id, request_id, on_complete
-        request = load_persisted_classification_request(workspace, run_id, request_id)
-        manifest = json.loads((Path(workspace) / "onboarding-runs" / run_id / "final-source-manifest.json").read_text(encoding="utf-8"))
+        self._workspace, self._organization_id, self._run_id, self._request_id, self._on_complete = workspace, organization_id, run_id, request_id, on_complete
+        root = resolve_organization_workspace(workspace, organization_id)
+        request = load_persisted_classification_request(str(root), run_id, request_id)
+        manifest = json.loads((onboarding_run_directory(root, run_id) / "final-source-manifest.json").read_text(encoding="utf-8"))
         preview = preview_scope(manifest, target=request.target, scope=request.scope)
         self._evidence_class = tk.StringVar(value=request.proposed_evidence_class.value)
         self._integrity = tk.StringVar(value=request.proposed_integrity_treatment.value)
@@ -209,7 +268,7 @@ class ClassificationDecisionWindow(tk.Toplevel):
             return
         try:
             result = submit_console_classification_decision(
-                workspace=self._workspace, onboarding_run_id=self._run_id, request_id=self._request_id,
+                workspace=self._workspace, organization_id=self._organization_id, onboarding_run_id=self._run_id, request_id=self._request_id,
                 evidence_class=EvidenceClass(self._evidence_class.get()), integrity_treatment=IntegrityTreatment(self._integrity.get()),
                 reviewer_identity=self._identity.get(), reviewer_role=self._role.get(), authority_claim=self._authority.get(),
                 rationale=self._rationale.get("1.0", "end").strip(),
@@ -350,12 +409,13 @@ class OnboardingWindow(tk.Toplevel):
         self.organization_id = tk.StringVar()
         self.organization_name = tk.StringVar()
         self.repository_path = tk.StringVar()
-        self.workspace_path = tk.StringVar(value=str(Path.home() / ".rip-onboarding"))
+        self.workspace_path = tk.StringVar(value=str(storage_directory("Workspace")))
         self.provider_id = tk.StringVar(value=self._capability.provider_id)
         self.model = tk.StringVar(value=self._capability.model)
         self.readiness = tk.StringVar(value="Select a capability to check local configuration and declared context support. Live provider connectivity is not verified in Phase 6A.")
+        self.stage = tk.StringVar(value="Stage 1 of 4 — Set up the organization")
         self.activity = tk.StringVar(value="Ready to establish an isolated, read-only onboarding run.")
-        self.next_stage = tk.StringVar(value="Next stage: observe approved repository evidence.")
+        self.next_stage = tk.StringVar(value="Required next action: complete the organization fields, then validate the reasoning capability.")
         self.respondent_identity = tk.StringVar()
         self.respondent_role = tk.StringVar()
         self.authority_claim = tk.StringVar(value="supplied by customer; authority not verified")
@@ -383,10 +443,13 @@ class OnboardingWindow(tk.Toplevel):
         self.validate_button.grid(row=6, column=0, sticky="w", pady=(8, 0))
         ttk.Label(setup, textvariable=self.readiness, wraplength=650).grid(row=6, column=1, columnspan=2, sticky="w", padx=(8, 0), pady=(8, 0))
 
-        progress = ttk.LabelFrame(self, text="Current Activity", padding=10)
+        progress = ttk.LabelFrame(self, text="Where you are now", padding=10)
         progress.grid(row=3, column=0, sticky="ew", padx=12, pady=(8, 0))
+        ttk.Label(progress, textvariable=self.stage, font=("Segoe UI", 11, "bold"), wraplength=850).pack(anchor="w")
         ttk.Label(progress, textvariable=self.activity, wraplength=850).pack(anchor="w")
-        ttk.Label(progress, textvariable=self.next_stage, wraplength=850).pack(anchor="w", pady=(4, 0))
+        ttk.Label(progress, textvariable=self.next_stage, font=("Segoe UI", 10, "bold"), wraplength=850).pack(anchor="w", pady=(4, 0))
+        self.onboarding_progress = ttk.Progressbar(progress, mode="indeterminate")
+        self.onboarding_progress.pack(fill="x", pady=(8, 0))
 
         results = ttk.PanedWindow(self, orient="horizontal")
         results.grid(row=4, column=0, sticky="nsew", padx=12, pady=(8, 0))
@@ -416,19 +479,26 @@ class OnboardingWindow(tk.Toplevel):
 
         controls = ttk.Frame(self, padding=12)
         controls.grid(row=6, column=0, sticky="ew")
-        self.observe_button = ttk.Button(controls, text="Begin Read-Only Observation", command=self.begin_observation)
+        run_actions = ttk.LabelFrame(controls, text="Run actions", padding=6)
+        run_actions.pack(side="left", fill="x", expand=True)
+        self.observe_button = ttk.Button(run_actions, text="Start read-only observation", command=self.begin_observation, state="disabled")
         self.observe_button.pack(side="left")
-        ttk.Button(controls, text="Restart Onboarding Run", command=self.begin_observation).pack(side="left", padx=(8, 0))
-        ttk.Button(controls, text="Review Classification", command=self.open_classification_review).pack(side="left", padx=(8, 0))
-        self.guided_button = ttk.Button(controls, text="Begin / Resume Guided Understanding", command=self.begin_guided_understanding, state="disabled")
-        self.guided_button.pack(side="left", padx=(8, 0))
-        self.answer_button = ttk.Button(controls, text="Record Supplied Answer", command=self.record_guided_answer, state="disabled")
+        self.restart_button = ttk.Button(run_actions, text="Start a new run", command=self.begin_observation, state="disabled")
+        self.restart_button.pack(side="left", padx=(8, 0))
+        self.review_button = ttk.Button(run_actions, text="Open an existing run", command=self.open_classification_review)
+        self.review_button.pack(side="left", padx=(8, 0))
+
+        understanding_actions = ttk.LabelFrame(controls, text="Understanding actions", padding=6)
+        understanding_actions.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        self.guided_button = ttk.Button(understanding_actions, text="Start guided questions", command=self.begin_guided_understanding, state="disabled")
+        self.guided_button.pack(side="left")
+        self.answer_button = ttk.Button(understanding_actions, text="Save answer", command=self.record_guided_answer, state="disabled")
         self.answer_button.pack(side="left", padx=(8, 0))
-        self.proposal_button = ttk.Button(controls, text="Generate Understanding Proposal", command=self.generate_proposal, state="disabled")
+        self.proposal_button = ttk.Button(understanding_actions, text="Build proposal", command=self.generate_proposal, state="disabled")
         self.proposal_button.pack(side="left", padx=(8, 0))
-        self.review_proposal_button = ttk.Button(controls, text="Mark Proposal Reviewed", command=self.review_proposal, state="disabled")
+        self.review_proposal_button = ttk.Button(understanding_actions, text="Mark reviewed", command=self.review_proposal, state="disabled")
         self.review_proposal_button.pack(side="left", padx=(8, 0))
-        ttk.Button(controls, text="Close", command=self.destroy).pack(side="right")
+        ttk.Button(controls, text="Close", command=self.destroy).pack(side="right", padx=(8, 0))
 
     def _field(self, parent: ttk.LabelFrame, label: str, variable: tk.StringVar, row: int, browse=None) -> None:
         ttk.Label(parent, text=label + ":").grid(row=row, column=0, sticky="w", pady=2)
@@ -445,10 +515,20 @@ class OnboardingWindow(tk.Toplevel):
         if selected: self.workspace_path.set(selected)
 
     def open_classification_review(self) -> None:
-        run_id = self._context.onboarding_run_id if self._context else simpledialog.askstring("Classification Review", "Onboarding run ID to inspect:", parent=self)
+        suggested_run_id = self._context.onboarding_run_id if self._context else ""
+        run_id = simpledialog.askstring(
+            "Open Existing Run",
+            "Enter the onboarding run ID (for example, run-003):",
+            initialvalue=suggested_run_id,
+            parent=self,
+        )
+        organization_id = self._context.organization_id if self._context else self.organization_id.get().strip()
         if not run_id or not self.workspace_path.get().strip(): return
-        try: ClassificationReviewWindow(self, self.workspace_path.get(), run_id)
-        except Exception as exc: messagebox.showerror("Classification Review", str(exc))
+        if not organization_id:
+            messagebox.showerror("Open Existing Run", "Enter the Organization ID before opening a preserved onboarding run.")
+            return
+        try: ClassificationReviewWindow(self, self.workspace_path.get(), organization_id, run_id)
+        except (FileNotFoundError, ValueError, OSError) as exc: messagebox.showerror("Open Existing Run", "Unable to open the preserved onboarding run. " + str(exc))
 
     def _selected_capability(self) -> ReasoningCapability:
         return ReasoningCapability(self.provider_id.get().strip(), self.model.get().strip(), self.provider_id.get().strip() or "Provider", True, True, False)
@@ -457,9 +537,23 @@ class OnboardingWindow(tk.Toplevel):
         try:
             validation = validate_reasoning_capability(self._selected_capability())
         except ValueError as exc:
-            self.readiness.set(str(exc)); return False
+            self.readiness.set(str(exc))
+            self.stage.set("Stage 1 of 4 — Setup needs attention")
+            self.activity.set("RIP cannot begin observation until the capability configuration is valid.")
+            self.next_stage.set("Required next action: correct the provider or model configuration, then validate again.")
+            self.observe_button.configure(state="disabled")
+            return False
         self._capability = validation.capability
         self.readiness.set(" ".join(validation.reasons))
+        if validation.locally_eligible_for_observation:
+            self.stage.set("Stage 1 of 4 — Setup complete")
+            self.activity.set("The organization and local reasoning capability are ready for a read-only onboarding run.")
+            self.next_stage.set("Required next action: select Start read-only observation.")
+            self.observe_button.configure(state="normal")
+        else:
+            self.stage.set("Stage 1 of 4 — Setup needs attention")
+            self.next_stage.set("Required next action: correct the capability configuration, then validate again.")
+            self.observe_button.configure(state="disabled")
         return validation.locally_eligible_for_observation
 
     def begin_observation(self) -> None:
@@ -476,15 +570,21 @@ class OnboardingWindow(tk.Toplevel):
             self._context = restart_onboarding_run(workspace, repository_path=self.repository_path.get(), reasoning_capability=self._capability)
         except Exception as exc:
             messagebox.showerror("Organization Onboarding", str(exc)); return
-        self._busy = True; self.observe_button.configure(state="disabled")
+        self._busy = True
+        self.observe_button.configure(state="disabled")
+        self.restart_button.configure(state="disabled")
+        self.review_button.configure(state="disabled")
+        self.onboarding_progress.start(12)
         self.feed.delete(0, tk.END); self._replace_summary("")
+        self.stage.set("Stage 2 of 4 — Observing approved source")
         self.activity.set("Observing approved repository evidence. Customer sources are read-only; onboarding records are written only to the isolated RIP workspace.")
-        self.next_stage.set("Next stage: organize observed evidence into an onboarding summary.")
+        self.next_stage.set("RIP is working now. No user action is required until observation completes or stops safely.")
         threading.Thread(target=self._observe_worker, args=(self._context,), daemon=True).start()
 
     def _observe_worker(self, context) -> None:
         try:
-            result = observe_organization(context, progress_callback=lambda event: self._events.put(("feed", event)))
+            from ..platform_provisioning import load_trust_authority_context
+            result = observe_organization(context, progress_callback=lambda event: self._events.put(("feed", event)), journal_context=load_trust_authority_context().journal_context())
             self._events.put(("observed", result))
         except Exception as exc:
             self._events.put(("error", str(exc)))
@@ -500,13 +600,53 @@ class OnboardingWindow(tk.Toplevel):
                 elif event_type == "observed" and isinstance(payload, ObservationRun):
                     self._observation = payload
                     self._replace_summary(format_understanding_meter(payload) + "\n\n" + format_observation_summary(payload))
+                    self.stage.set("Stage 3 of 4 — Guided understanding")
                     self.activity.set("Read-only observation complete. Every summary item is linked to observed repository evidence; no customer-source modifications occurred.")
-                    self.next_stage.set("Next stage: begin deterministic guided understanding. Supplied answers remain non-governance and non-memory.")
+                    self.next_stage.set("Required next action: select Start guided questions. Supplied answers remain non-governance and non-memory.")
                     self.guided_button.configure(state="normal")
+                    self.restart_button.configure(state="normal")
+                    self.review_button.configure(state="normal")
                     self._finish()
                 elif event_type == "error":
-                    self.activity.set("Observation stopped: " + str(payload)); self.next_stage.set("Next stage: correct the displayed issue or start a fresh onboarding run.")
+                    self.stage.set("Attention required — onboarding stopped safely")
+                    self.activity.set("Observation stopped: " + str(payload))
+                    self.next_stage.set("Required next action: select Open an existing run to inspect preserved diagnostics and recovery options. Start a new run only if preservation is not required.")
+                    self.restart_button.configure(state="normal")
+                    self.review_button.configure(state="normal")
                     self._finish()
+                elif event_type == "guided-started" and isinstance(payload, GuidedUnderstandingState):
+                    self._guided_state = payload
+                    self._render_guided_question()
+                    self.proposal_button.configure(state="normal")
+                    self.stage.set("Stage 3 of 4 — Guided understanding")
+                    self.activity.set("Source freshness verified. Guided understanding is ready and customer sources remain read-only.")
+                    self.guided_button.configure(state="normal")
+                    self._finish()
+                elif event_type == "guided-recorded" and isinstance(payload, GuidedUnderstandingState):
+                    self._guided_state = payload
+                    self.guided_answer.delete("1.0", "end")
+                    self._render_guided_question()
+                    self.activity.set("Answer saved with respondent and authority provenance after source freshness verification.")
+                    self.guided_button.configure(state="normal")
+                    self.proposal_button.configure(state="normal")
+                    self._finish()
+                elif event_type == "proposal-generated" and isinstance(payload, OrganizationalUnderstandingProposal):
+                    self._proposal = payload
+                    self._replace_summary(format_understanding_proposal(payload))
+                    self.stage.set("Stage 4 of 4 — Review the understanding proposal")
+                    self.activity.set("Understanding proposal generated from current verified evidence. This proposal is not governance, Organizational Memory, approval, or activation.")
+                    self.next_stage.set("Required next action: review the proposal, then select Mark reviewed. Review does not approve or activate it.")
+                    self.review_proposal_button.configure(state="normal")
+                    self.proposal_button.configure(state="normal")
+                    self._finish()
+                elif event_type == "guided-error":
+                    self.activity.set("Guided work stopped safely: " + str(payload))
+                    self.next_stage.set("Required next action: review the error, verify that the source is stable, then try again.")
+                    self.guided_button.configure(state="normal" if self._observation is not None else "disabled")
+                    self.answer_button.configure(state="normal" if self._current_guided_question() is not None else "disabled")
+                    self.proposal_button.configure(state="normal" if self._guided_state is not None else "disabled")
+                    self._finish()
+                    messagebox.showerror("Guided Understanding", str(payload), parent=self)
         except queue.Empty:
             pass
         finally:
@@ -516,37 +656,65 @@ class OnboardingWindow(tk.Toplevel):
         self.summary.configure(state="normal"); self.summary.delete("1.0", "end"); self.summary.insert("1.0", value); self.summary.configure(state="disabled")
 
     def _finish(self) -> None:
-        self._busy = False; self.observe_button.configure(state="normal")
+        self._busy = False
+        self.onboarding_progress.stop()
 
     def begin_guided_understanding(self) -> None:
+        if self._busy:
+            return
         if self._observation is None:
             messagebox.showerror("Guided Understanding", "Complete a read-only observation before guided understanding.")
             return
+        self._busy = True
+        self.guided_button.configure(state="disabled")
+        self.answer_button.configure(state="disabled")
+        self.proposal_button.configure(state="disabled")
+        self.onboarding_progress.start(12)
+        self.stage.set("Stage 3 of 4 — Verifying source freshness")
+        self.activity.set("RIP is confirming that the approved source still matches the completed observation.")
+        self.next_stage.set("RIP is working now. No user action is required until verification completes.")
+        threading.Thread(target=self._begin_guided_worker, args=(self._observation,), daemon=True).start()
+
+    def _begin_guided_worker(self, observation: ObservationRun) -> None:
         try:
-            self._guided_state = begin_guided_understanding(self._observation)
-            self._render_guided_question()
-            self.proposal_button.configure(state="normal")
-            self.activity.set("Guided understanding uses deterministic questions derived from observed uncertainty. Customer sources remain read-only.")
+            self._events.put(("guided-started", begin_guided_understanding(observation)))
         except Exception as exc:
-            messagebox.showerror("Guided Understanding", str(exc))
+            self._events.put(("guided-error", str(exc)))
 
     def record_guided_answer(self) -> None:
+        if self._busy:
+            return
         if self._observation is None or self._guided_state is None:
             return
         question = self._current_guided_question()
         if question is None:
             return
+        values = {
+            "question_id": question.question_id,
+            "respondent_identity": self.respondent_identity.get(),
+            "respondent_role": self.respondent_role.get(),
+            "authority_claim": self.authority_claim.get(),
+            "disposition": GuidedAnswerDisposition(self.answer_disposition.get()),
+            "answer": self.guided_answer.get("1.0", "end").strip(),
+        }
+        self._busy = True
+        self.answer_button.configure(state="disabled")
+        self.proposal_button.configure(state="disabled")
+        self.onboarding_progress.start(12)
+        self.stage.set("Stage 3 of 4 — Verifying and saving the answer")
+        self.activity.set("RIP is checking source freshness before preserving this supplied answer.")
+        self.next_stage.set("RIP is working now. The answer will remain on screen if validation fails.")
+        threading.Thread(
+            target=self._record_guided_worker,
+            args=(self._observation, self._guided_state, values),
+            daemon=True,
+        ).start()
+
+    def _record_guided_worker(self, observation: ObservationRun, state: GuidedUnderstandingState, values: dict[str, object]) -> None:
         try:
-            self._guided_state = record_guided_answer(
-                self._observation, self._guided_state, question_id=question.question_id,
-                respondent_identity=self.respondent_identity.get(), respondent_role=self.respondent_role.get(),
-                authority_claim=self.authority_claim.get(), disposition=GuidedAnswerDisposition(self.answer_disposition.get()),
-                answer=self.guided_answer.get("1.0", "end").strip(),
-            )
-            self.guided_answer.delete("1.0", "end")
-            self._render_guided_question()
+            self._events.put(("guided-recorded", record_guided_answer(observation, state, **values)))
         except Exception as exc:
-            messagebox.showerror("Guided Understanding", str(exc))
+            self._events.put(("guided-error", str(exc)))
 
     def _current_guided_question(self):
         if self._guided_state is None:
@@ -561,28 +729,47 @@ class OnboardingWindow(tk.Toplevel):
             summary = self._guided_state.summary
             self.guided_details.insert("1.0", f"No remaining unanswered questions. Readiness: {summary.readiness}; authority gaps: {summary.authority_gaps}; contradictions: {summary.contradictions}. No governance, approval, activation, or organizational memory was created.")
             self.answer_button.configure(state="disabled")
+            self.stage.set("Stage 4 of 4 — Build the understanding proposal")
+            self.next_stage.set("Required next action: select Build proposal, then review the result.")
         else:
             self.guided_details.insert("1.0", f"Question ({question.priority.value}): {question.prompt}\n\nObserved: {question.observed}\nWhy this exists: {question.why_this_question}\nUncertainty resolved: {question.uncertainty_resolved}\nUnderstanding change: {question.understanding_change}\nEvidence: {', '.join(question.evidence_paths) or 'observation scope'}")
             self.answer_button.configure(state="normal")
+            self.stage.set("Stage 3 of 4 — Guided understanding")
+            self.next_stage.set("Required next action: enter the respondent, role, authority claim, and answer; then select Save answer.")
         self.guided_details.configure(state="disabled")
 
     def generate_proposal(self) -> None:
+        if self._busy:
+            return
         if self._observation is None or self._guided_state is None:
             return
+        self._busy = True
+        self.answer_button.configure(state="disabled")
+        self.proposal_button.configure(state="disabled")
+        self.onboarding_progress.start(12)
+        self.stage.set("Stage 4 of 4 — Verifying evidence for the proposal")
+        self.activity.set("RIP is checking source freshness before building the understanding proposal.")
+        self.next_stage.set("RIP is working now. No user action is required until the proposal is ready.")
+        threading.Thread(
+            target=self._generate_proposal_worker,
+            args=(self._observation, self._guided_state),
+            daemon=True,
+        ).start()
+
+    def _generate_proposal_worker(self, observation: ObservationRun, state: GuidedUnderstandingState) -> None:
         try:
-            self._proposal = generate_understanding_proposal(self._observation, self._guided_state)
-            self._replace_summary(format_understanding_proposal(self._proposal))
-            self.activity.set("Understanding proposal generated from current evidence. This proposal is not governance, Organizational Memory, approval, or activation.")
-            self.review_proposal_button.configure(state="normal")
+            self._events.put(("proposal-generated", generate_understanding_proposal(observation, state)))
         except Exception as exc:
-            messagebox.showerror("Understanding Proposal", str(exc))
+            self._events.put(("guided-error", str(exc)))
 
     def review_proposal(self) -> None:
         if self._proposal is None:
             return
         self._proposal = review_understanding_proposal(self._observation, self._proposal)
         self._replace_summary(format_understanding_proposal(self._proposal))
+        self.stage.set("Onboarding understanding reviewed")
         self.activity.set("Proposal marked reviewed. Reviewed does not mean approved.")
+        self.next_stage.set("This onboarding phase is complete. No governance or activation occurs automatically; close the window when finished.")
 
 
 class RipConsole(tk.Tk):
@@ -621,7 +808,7 @@ class RipConsole(tk.Tk):
         ttk.Label(header, text="RIP Reasoning Console", font=("Segoe UI", 15, "bold")).grid(row=0, column=0, sticky="w")
         self.status_label = ttk.Label(header, text="Idle")
         self.status_label.grid(row=0, column=1, sticky="e")
-        ttk.Button(header, text="Organization Onboarding", command=self.open_onboarding).grid(row=1, column=1, sticky="e", pady=(4, 0))
+        ttk.Button(header, text="Start or resume organization onboarding", command=self.open_onboarding).grid(row=1, column=1, sticky="e", pady=(4, 0))
 
         history_frame = ttk.Frame(self, padding=(12, 0, 12, 8))
         history_frame.grid(row=1, column=0, sticky="nsew")

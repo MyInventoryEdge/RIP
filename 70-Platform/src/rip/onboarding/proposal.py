@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, replace
 from pathlib import Path
+from ..paths import onboarding_run_directory
 
 from .models import (
     ConfirmedInterpretation, EpistemicLabel, GuidedAnswerDisposition, GuidedUnderstandingState,
@@ -173,7 +174,7 @@ def _assert_fresh(observation, state):
 
 
 def _persist(observation, proposal, interpretations, withdrawals, lifecycle_event="generated"):
-    root = Path(observation.context.workspace_path) / "onboarding-runs" / observation.context.onboarding_run_id / "proposals"
+    root = onboarding_run_directory(observation.context.workspace_path, observation.context.onboarding_run_id) / "proposals"
     root.mkdir(exist_ok=True)
     suffix = ".json" if lifecycle_event == "generated" else "." + lifecycle_event + ".json"
     path = root / (proposal.proposal_id + suffix)

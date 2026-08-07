@@ -21,6 +21,7 @@ from rip.onboarding import (
     restart_onboarding_run,
     resume_after_classification,
 )
+from tests.trust_test_context import trust_context
 
 
 class EvidenceClassificationLifecycleTests(unittest.TestCase):
@@ -32,6 +33,7 @@ class EvidenceClassificationLifecycleTests(unittest.TestCase):
         (self.repository / "src" / "app.py").write_text("print('customer')\n", encoding="utf-8")
         self.workspace = create_organization_workspace(self.base / "workspaces", organization_id="acme-org", display_name="Acme", repository_path=self.repository)
         self.context = restart_onboarding_run(self.workspace, repository_path=self.repository, reasoning_capability=recommend_reasoning_capability(environment={"OPENAI_API_KEY": "test"}), environment={"OPENAI_API_KEY": "test"})
+        self.journal_context = trust_context(self.base)
         observe_organization(self.context)
         self.run_root = Path(self.workspace.workspace_path) / "onboarding-runs" / self.context.onboarding_run_id
 
@@ -77,12 +79,12 @@ class EvidenceClassificationLifecycleTests(unittest.TestCase):
             decision_fingerprint=decision.fingerprint, supersedes_classification_id=None,
         )
         policy = create_classification_policy(policy_id="policy-001", organization_id=self.context.organization_id, onboarding_run_id=self.context.onboarding_run_id, source_manifest_fingerprint=manifest["manifest_fingerprint"], classifications=(record,))
-        recovery = resume_after_classification(self.context, policy, decisions=(decision,))
+        recovery = resume_after_classification(self.context, policy, decisions=(decision,), journal_context=self.journal_context)
         self.assertEqual(ClassificationReadiness.READY, recovery.readiness)
         self.assertEqual("observed", json.loads((self.run_root / "state.json").read_text(encoding="utf-8"))["state"])
         self.assertTrue((self.run_root / "classification-evaluation.json").is_file())
 
-    def test_changed_source_interrupts_resume_without_deleting_preserved_work(self) -> None:
+    def test_classification_does_not_own_source_reverification(self) -> None:
         request_evidence_classification(
             self.context, target="src/app.py", scope=ClassificationScope.EXACT_PATH,
             proposed_evidence_class=EvidenceClass.OPERATIONAL_STATE,
@@ -93,11 +95,10 @@ class EvidenceClassificationLifecycleTests(unittest.TestCase):
         policy = create_classification_policy(policy_id="policy-001", organization_id=self.context.organization_id, onboarding_run_id=self.context.onboarding_run_id, source_manifest_fingerprint=manifest["manifest_fingerprint"], classifications=())
         observation = (self.run_root / "observation.json").read_bytes()
         (self.repository / "src" / "app.py").write_text("changed\n", encoding="utf-8")
-        with self.assertRaisesRegex(RuntimeError, "Source changed"):
-            resume_after_classification(self.context, policy, decisions=())
+        recovery = resume_after_classification(self.context, policy, decisions=())
         self.assertEqual(observation, (self.run_root / "observation.json").read_bytes())
-        self.assertTrue((self.run_root / "resume-integrity-difference.json").is_file())
-        self.assertEqual("interrupted", json.loads((self.run_root / "state.json").read_text(encoding="utf-8"))["state"])
+        self.assertFalse((self.run_root / "resume-integrity-difference.json").is_file())
+        self.assertNotEqual(ClassificationReadiness.READY, recovery.readiness)
 
 
 if __name__ == "__main__":

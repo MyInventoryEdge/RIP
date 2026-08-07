@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from ..paths import onboarding_run_directory
 
 from .classification import (
     ClassificationDecision,
@@ -24,7 +25,7 @@ from .scope_preview import ScopePreview, validate_preview
 
 def load_persisted_contracts(workspace: str, run_id: str, kind: str) -> tuple[dict[str, object], ...]:
     """Load immutable contract envelopes deterministically; never mutate history."""
-    directory = Path(workspace) / "onboarding-runs" / run_id / "classifications" / kind
+    directory = onboarding_run_directory(workspace, run_id) / "classifications" / kind
     if not directory.is_dir():
         return ()
     return tuple(load_contract_payload(path)["contract"] for path in sorted(directory.glob("*.json")))
@@ -156,13 +157,13 @@ def _validate_workspace_and_run(root: Path, request: ClassificationRequest) -> N
     workspace = _load_json(root / "workspace.json", "organization workspace")
     if workspace.get("organization_id") != request.organization_id:
         raise ValueError("classification request organization does not match workspace")
-    context = _load_json(root / "onboarding-runs" / request.onboarding_run_id / "context.json", "onboarding run")
+    context = _load_json(onboarding_run_directory(root, request.onboarding_run_id) / "context.json", "onboarding run")
     if context.get("organization_id") != request.organization_id or context.get("onboarding_run_id") != request.onboarding_run_id:
         raise ValueError("classification request does not match the retained onboarding run")
 
 
 def _load_retained_manifest(root: Path, run_id: str) -> dict[str, object]:
-    manifest = _load_json(root / "onboarding-runs" / run_id / "final-source-manifest.json", "retained manifest")
+    manifest = _load_json(onboarding_run_directory(root, run_id) / "final-source-manifest.json", "retained manifest")
     if not isinstance(manifest.get("manifest_fingerprint"), str):
         raise ValueError("retained manifest has no manifest fingerprint")
     return manifest

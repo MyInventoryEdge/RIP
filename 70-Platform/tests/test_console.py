@@ -3,9 +3,14 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+import queue
 
-from rip.console.app import format_details, format_discovery_details, format_observation_summary, format_understanding_meter, format_understanding_proposal, format_voice_status, repository_relative_evidence
+from rip.console.app import OnboardingWindow, classification_review_stage, format_details, format_discovery_details, format_observation_summary, format_understanding_meter, format_understanding_proposal, format_voice_status, repository_relative_evidence
 from rip.onboarding import (
+    ClassificationReadiness,
+    GuidedAnswerDisposition,
     ObservationMode,
     ObservationRun,
     ObservationSummary,
@@ -28,11 +33,68 @@ class ConsoleFormattingTests(unittest.TestCase):
         self.assertIn("class ClassificationReviewWindow", source)
         self.assertIn("load_classification_review", source)
         self.assertIn("format_classification_review", source)
-        self.assertIn("Review Classification", source)
-        self.assertIn("Show Complete Diagnostics", source)
-        self.assertIn("Onboarding paused safely. Completed work was preserved.", source)
+        self.assertIn("Open an existing run", source)
+        self.assertIn("View integrity and run diagnostics", source)
+        self.assertIn("Current stage:", source)
+        self.assertIn("No classification decisions required", source)
         self.assertNotIn("resume_after_classification(", source)
         self.assertNotIn("create_classification_decision(", source)
+
+    def test_classification_review_stage_exposes_one_clear_next_action(self) -> None:
+        interrupted = classification_review_stage(SimpleNamespace(state="interrupted", readiness="not-evaluated", requests=()))
+        self.assertEqual("Recovery required", interrupted.stage)
+        self.assertTrue(interrupted.allow_recovery_snapshot)
+        self.assertFalse(interrupted.allow_decision)
+        self.assertFalse(interrupted.allow_resume)
+
+        decision = classification_review_stage(SimpleNamespace(state="paused", readiness="awaiting-classification", requests=({"request_id": "request-1"},)))
+        self.assertEqual("Decision required", decision.stage)
+        self.assertTrue(decision.allow_decision)
+        self.assertFalse(decision.allow_recovery_snapshot)
+
+        ready = classification_review_stage(SimpleNamespace(state="paused", readiness=ClassificationReadiness.READY.value, requests=()))
+        self.assertEqual("Ready for safe continuation", ready.stage)
+        self.assertTrue(ready.allow_resume)
+        self.assertFalse(ready.allow_decision)
+
+    def test_primary_review_ui_contains_no_archival_capture(self) -> None:
+        source = (Path(__file__).resolve().parents[1] / "src" / "rip" / "console" / "app.py").read_text(encoding="utf-8")
+        self.assertIn("Stage 1 of 4 — Set up the organization", source)
+        self.assertIn("Stage 2 of 4 — Observing approved source", source)
+        self.assertIn("Stage 3 of 4 — Guided understanding", source)
+        self.assertIn("Stage 4 of 4 — Review the understanding proposal", source)
+        self.assertIn("Required next action:", source)
+        review_window = source[source.index("class ClassificationReviewWindow"):source.index("class ClassificationDecisionWindow")]
+        self.assertIn("Execute governed decision", review_window)
+        self.assertIn("Close and return later", review_window)
+        self.assertNotIn("archival source snapshot", review_window)
+
+    def test_guided_freshness_workers_return_through_ui_event_queue(self) -> None:
+        window = object.__new__(OnboardingWindow)
+        window._events = queue.Queue()
+        observation = SimpleNamespace()
+        state = SimpleNamespace()
+        proposal = SimpleNamespace()
+
+        with patch("rip.console.app.begin_guided_understanding", return_value=state):
+            window._begin_guided_worker(observation)
+        self.assertEqual(("guided-started", state), window._events.get_nowait())
+
+        values = {
+            "question_id": "question-1",
+            "respondent_identity": "Pat",
+            "respondent_role": "Owner",
+            "authority_claim": "authorized",
+            "disposition": GuidedAnswerDisposition.ANSWERED,
+            "answer": "Answer",
+        }
+        with patch("rip.console.app.record_guided_answer", return_value=state):
+            window._record_guided_worker(observation, state, values)
+        self.assertEqual(("guided-recorded", state), window._events.get_nowait())
+
+        with patch("rip.console.app.generate_understanding_proposal", return_value=proposal):
+            window._generate_proposal_worker(observation, state)
+        self.assertEqual(("proposal-generated", proposal), window._events.get_nowait())
     def test_primary_evidence_becomes_repository_relative_and_rejects_outside(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "RIP"; root.mkdir(); (root / ".git").mkdir()

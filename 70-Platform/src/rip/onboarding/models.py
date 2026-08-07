@@ -20,6 +20,7 @@ class OnboardingRunState(str, Enum):
     CREATED = "created"
     AWAITING_CLASSIFICATION = "awaiting-classification"
     OBSERVED = "observed"
+    PAUSED_AFFECTED_SCOPE = "paused-affected-scope"
     INTERRUPTED = "interrupted"
 
 

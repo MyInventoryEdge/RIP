@@ -260,7 +260,7 @@ class OrganizationOnboardingTests(unittest.TestCase):
         withdrawn = generate_understanding_proposal(observation, answered, withdrawals=(withdrawal,))
         self.assertNotIn(record.answer_id, withdrawn.supporting_answer_ids)
         (self.repository / "changed.txt").write_text("changed", encoding="utf-8")
-        with self.assertRaisesRegex(RuntimeError, "stale"):
+        with self.assertRaisesRegex(RuntimeError, "source changed"):
             generate_understanding_proposal(observation, answered)
 
     def test_untrusted_confirmation_and_withdrawal_are_rejected_and_review_is_immutable(self) -> None:

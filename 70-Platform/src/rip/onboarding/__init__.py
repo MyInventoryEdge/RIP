@@ -37,10 +37,13 @@ from .models import (
 from .service import (
     DEFAULT_REASONING_CAPABILITIES,
     create_organization_workspace,
+    continue_retained_post_integrity_run,
     current_repository_fingerprint,
     observe_organization,
     recommend_reasoning_capability,
     restart_onboarding_run,
+    resolve_onboarding_run_directory,
+    resolve_organization_workspace,
     validate_reasoning_capability,
 )
 from .guided import begin_guided_understanding, generate_guided_questions, record_guided_answer
@@ -83,10 +86,17 @@ from .classification_integration import ClassificationIntegrationResult, integra
 from .scope_preview import ScopePreview, preview_scope, validate_preview
 from .decision_service import accept_decision, load_persisted_classification_decisions, load_persisted_classification_request
 from .resume_orchestration import ResumeOrchestrationResult, resume_governed_onboarding
+from .recovery import (
+    PreservedInterruptedRun, RecoverySnapshot, RecoverySnapshotProgress,
+    create_archival_source_snapshot, create_verified_recovery_snapshot,
+    load_verified_recovery_snapshot, preserve_interrupted_run,
+    reopen_preserved_interrupted_run,
+)
 
 __all__ = [
     "CapabilityReadiness",
     "CapabilityValidation",
+    "continue_retained_post_integrity_run",
     "ClassificationDecision",
     "ClassificationRequest",
     "ClassificationRequestStatus",
@@ -151,6 +161,8 @@ __all__ = [
     "observe_organization",
     "recommend_reasoning_capability",
     "restart_onboarding_run",
+    "resolve_onboarding_run_directory",
+    "resolve_organization_workspace",
     "record_guided_answer",
     "request_evidence_classification",
     "resume_after_classification",
@@ -163,6 +175,14 @@ __all__ = [
     "load_persisted_classification_request",
     "ResumeOrchestrationResult",
     "resume_governed_onboarding",
+    "RecoverySnapshot",
+    "RecoverySnapshotProgress",
+    "PreservedInterruptedRun",
+    "preserve_interrupted_run",
+    "reopen_preserved_interrupted_run",
+    "create_archival_source_snapshot",
+    "create_verified_recovery_snapshot",
+    "load_verified_recovery_snapshot",
     "load_contract_payload",
     "persist_contract",
     "serialize_contract",

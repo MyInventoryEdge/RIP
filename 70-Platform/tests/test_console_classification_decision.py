@@ -37,9 +37,9 @@ class ConsoleClassificationDecisionTests(unittest.TestCase):
             decision = SimpleNamespace(decision_id="decision-001")
             record = SimpleNamespace(classification_id="record-001")
             integration = SimpleNamespace(readiness=ClassificationReadiness.AWAITING_CLASSIFICATION, unresolved_request_ids=("request-other",))
-            with patch("rip.console.app.load_persisted_classification_request", return_value=self.request) as load, patch("rip.console.app.preview_scope", return_value=SimpleNamespace()) as preview, patch("rip.console.app.accept_decision", return_value=(decision, record)) as accept, patch("rip.console.app.integrate_persisted_classifications", return_value=integration) as integrate:
+            with patch("rip.console.app.resolve_organization_workspace", return_value=root), patch("rip.console.app.load_persisted_classification_request", return_value=self.request) as load, patch("rip.console.app.preview_scope", return_value=SimpleNamespace()) as preview, patch("rip.console.app.accept_decision", return_value=(decision, record)) as accept, patch("rip.console.app.integrate_persisted_classifications", return_value=integration) as integrate:
                 result = submit_console_classification_decision(
-                    workspace=str(root), onboarding_run_id="run-001", request_id="request-001",
+                    workspace=str(root), organization_id="acme", onboarding_run_id="run-001", request_id="request-001",
                     evidence_class=EvidenceClass.OPERATIONAL_STATE,
                     integrity_treatment=IntegrityTreatment.NON_BLOCKING_REPORTED,
                     reviewer_identity="Pat", reviewer_role="Gatekeeper", authority_claim="classification authority", rationale="Reviewed.",

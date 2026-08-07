@@ -6,6 +6,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..paths import constitutional_memory_path
 from .models import ConstitutionalMemory, Foundation, FoundationArtifact, freeze_mapping
 from .parser import parse_artifact
 from .registry import ConstitutionalValidationError, parse_registry, validate_entries
@@ -26,7 +27,8 @@ def find_foundation_root(start: str | Path | None = None) -> Path:
 
 
 def default_state_path(root: Path) -> Path:
-    return root.parent / "70-Platform" / ".rip-state" / "constitutional-memory.json"
+    """Retained for callers; constitutional state is platform-owned storage."""
+    return constitutional_memory_path()
 
 
 def constitutional_boot(root: str | Path | None = None, *, state_path: str | Path | None = None) -> ConstitutionalMemory:

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import fingerprint
+from ..paths import onboarding_run_directory
 
 
 EVIDENCE_CLASSIFICATION_SCHEMA = "rip.evidence-classification.v1"
@@ -180,7 +181,7 @@ def serialize_contract(value: ClassificationRequest | ClassificationDecision | E
 def persist_contract(workspace_path: str | Path, value: ClassificationRequest | ClassificationDecision | EvidenceClassification | EvidenceClassificationPolicy) -> Path:
     """Persist one immutable contract beneath its explicit onboarding-run workspace."""
     root = Path(workspace_path)
-    directory = root / "onboarding-runs" / _run_for(value) / "classifications" / _kind_for(value)
+    directory = onboarding_run_directory(root, _run_for(value)) / "classifications" / _kind_for(value)
     directory.mkdir(parents=True, exist_ok=True)
     destination = directory / f"{_id_for(value)}.json"
     if destination.exists():

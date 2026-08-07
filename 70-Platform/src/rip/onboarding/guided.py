@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 from pathlib import Path
+from ..paths import onboarding_run_directory
 
 from .models import (
     GuidedAnswerDisposition,
@@ -178,7 +179,7 @@ def _verify_fresh(observation):
 
 
 def _state_path(observation):
-    return Path(observation.context.workspace_path) / "onboarding-runs" / observation.context.onboarding_run_id / "guided-understanding.json"
+    return onboarding_run_directory(observation.context.workspace_path, observation.context.onboarding_run_id) / "guided-understanding.json"
 
 
 def _payload(value):

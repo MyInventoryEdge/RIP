@@ -9,7 +9,9 @@ from ..observation.models import Observation
 from .models import ArtifactCandidate, CompatibilityStatus
 
 TEXT_EXTENSIONS = frozenset({".json", ".md", ".py", ".toml", ".txt", ".yaml", ".yml"})
-RUNTIME_PARTS = frozenset({".rip-state", ".rip-voice"})
+# RIP-owned state is isolated under the platform storage root, which onboarding
+# rejects as overlapping a customer source. No hidden RIP directory is special.
+RUNTIME_PARTS = frozenset()
 GENERATED_FILENAMES = frozenset({"candidate-review.html", "candidate-review.md", "interpretation-report.md"})
 TEMPORARY_SUFFIXES = frozenset({".tmp", ".temp", ".bak", ".swp"})
 

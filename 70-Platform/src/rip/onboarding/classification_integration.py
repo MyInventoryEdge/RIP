@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
+from ..paths import onboarding_run_directory
 
 from .classification import (
     ClassificationDecision,
@@ -53,7 +54,7 @@ def integrate_persisted_classifications(*, workspace: str | Path, onboarding_run
     root = Path(workspace)
     workspace_manifest = _read_object(root / "workspace.json", "workspace")
     organization_id = _string(workspace_manifest, "organization_id", "workspace")
-    run_root = root / "onboarding-runs" / onboarding_run_id
+    run_root = onboarding_run_directory(root, onboarding_run_id)
     context = _read_object(run_root / "context.json", "onboarding run")
     if context.get("organization_id") != organization_id or context.get("onboarding_run_id") != onboarding_run_id:
         raise ValueError("retained onboarding run does not match workspace")
@@ -85,7 +86,7 @@ def integrate_persisted_classifications(*, workspace: str | Path, onboarding_run
 
 
 def _load_typed(root: Path, run_id: str, kind: str, contract_type: type[_T]) -> tuple[_T, ...]:
-    directory = root / "onboarding-runs" / run_id / "classifications" / kind
+    directory = onboarding_run_directory(root, run_id) / "classifications" / kind
     if not directory.is_dir():
         return ()
     loaded: list[_T] = []
