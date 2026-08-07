@@ -38,14 +38,31 @@ The workspace boundary is validated before initialization and before every run: 
 
 The Discovery Feed is an audit-visible representation of actual work. Phase 6A emits deterministic semantic stages for:
 
-1. repository fingerprint start, per-entry processed counts, and completion;
+1. repository fingerprint start, periodically coalesced processed-entry counts, and completion;
 2. repository observation start and completion with the actual observed-entry count;
 3. repository integrity-verification start, per-entry processed counts, and completion;
 4. evidence classification and observation-summary construction;
 5. evidence signals discovered from completed observation; and
 6. observation-run completion.
 
-The underlying filesystem observer retains responsibility for observation. Because it has no per-entry progress callback, Phase 6A does not simulate one. It reports the truthful stage transition and completed observation count instead.
+The filesystem observer projects path and type evidence from the completed initial source manifest. It reports the truthful stage transition and completed observation count rather than simulating separate per-entry observation work.
+
+Progress events are operational presentation, not additional evidence. RIP coalesces manifest progress at a fixed entry interval so a large repository does not create hundreds of thousands of retained UI events. Every reported count represents completed work, and the completion event retains the exact final count.
+
+## Performance without weakened integrity
+
+Source performance optimizations preserve the governed trust boundary:
+
+- File content is still SHA-256 hashed before and after observation.
+- Hashing reads files in bounded buffers rather than loading an entire file into memory.
+- A bounded worker pool may hash independent files concurrently, but results are consumed in deterministic repository order before manifest construction.
+- The source-manifest schema, per-file SHA-256 values, aggregate fingerprint, manifest fingerprint, symlink handling, and access-error representation remain unchanged.
+- Filesystem observations are projected from the exact initial source manifest instead of performing a redundant third repository walk. This changes neither the observation scope nor the evidence classification rules.
+- Phase timing, byte counts, worker count, progress interval, and verification method are written to `observation-performance.json`. Operational timing is kept outside deterministic evidence fingerprints.
+
+After an independent before/after content verification succeeds, a process-local native filesystem watcher and deterministic metadata fingerprint may establish that the source remains unchanged during guided interaction. The watcher is an optimization only. If it is unavailable, unhealthy, overflowed, reports a source change, or disagrees with current metadata, RIP performs a complete SHA-256 freshness scan. A process restart also falls back to complete verification because no process-local watcher survives restart.
+
+RIP does not trust file size or modification time as a substitute for content integrity. Metadata is used only to invalidate the fast path; it never proves content identity without the clean native watcher and the previously completed full-content baseline.
 
 ## Epistemic representation
 

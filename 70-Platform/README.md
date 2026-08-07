@@ -41,7 +41,7 @@ No network access, AI provider, database, or non-standard Python dependency is r
 
 ## Constitutional Boot and Memory
 
-RIP bootstraps `RIP-000` and `RIP-007`, discovers the active Constitutional Corpus from the Registry, validates every registered artifact, and retains a validated Constitutional Memory. The runtime state is stored atomically at `70-Platform/.rip-state/constitutional-memory.json`, is ignored by Git, and is reused when source signatures are unchanged. A changed registry or constitutional artifact rebuilds the validated memory; corrupt state is rejected and recovered from the authoritative Markdown corpus.
+RIP bootstraps `RIP-000` and `RIP-007`, discovers the active Constitutional Corpus from the Registry, validates every registered artifact, and retains a validated Constitutional Memory. Runtime state is stored atomically under `C:\RIP\State` through the platform storage authority and is reused when source signatures are unchanged. A changed registry or constitutional artifact rebuilds the validated memory; corrupt state is rejected and recovered from the authoritative Markdown corpus.
 
 ## Canonical session parsing
 
@@ -55,7 +55,7 @@ The output directory contains `canonical-session.json` (structured canonical dat
 
 ## Voice interaction
 
-Voice is an optional interface preference, not constitutional state. It uses `OPENAI_API_KEY`, OpenAI speech synthesis and transcription, and a microphone accessible through `sounddevice`. Configuration is local at `70-Platform/.rip-voice/config.json` and is ignored by Git.
+Voice is an optional interface preference, not constitutional state. It uses `OPENAI_API_KEY`, OpenAI speech synthesis and transcription, and a microphone accessible through `sounddevice`. Configuration is stored under `C:\RIP\Configuration` through the platform storage authority.
 
 The Reasoning Console supports typed and spoken questions. Click **Talk** or press **F4**, speak a question, and RIP places the recognized text into the normal question entry before submitting through the existing reasoning workflow. RIP automatically speaks completed responses; **Mute** disables only response playback. **Voice Status** shows the configured and resolved microphone, voice, speech-enabled setting, and transcription model.
 

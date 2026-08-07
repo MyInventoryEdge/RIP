@@ -13,7 +13,8 @@ dependencies = ["openai>=1.0.0"]
 [project.scripts]
 rip = "rip.cli:main"
 rip-foundation = "rip.cli:main"
-rip-console = "rip.console:main"
+rip-console = "rip.desktop:main"
+rip-desktop = "rip.desktop:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
